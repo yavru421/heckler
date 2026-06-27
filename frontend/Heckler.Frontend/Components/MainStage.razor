@@ -1,4 +1,5 @@
 @using Heckler.Frontend.Models
+@inject JokeService JokeService
 
 <div class="stage-container">
     <div class="stage-header">
@@ -7,17 +8,36 @@
     </div>
     
     <div class="joke-feed">
-        @foreach (var joke in LiveJokes)
+        @if (LiveJokes == null)
         {
-            <JokeCard @key="joke.Id" Joke="joke" />
+            <p class="loading-text">Tuning the mic... 🎤</p>
+        }
+        else if (LiveJokes.Count == 0)
+        {
+            <p class="empty-text">No jokes on the setlist yet. Go to the Writer's Room and feed the machine! 🤖</p>
+        }
+        else
+        {
+            @foreach (var joke in LiveJokes)
+            {
+                <JokeCard @key="joke.Id" Joke="joke" OnVoted="LoadJokes" />
+            }
         }
     </div>
 </div>
 
 @code {
-    private List<JokeModel> LiveJokes = new()
+    private List<JokeModel>? LiveJokes { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        new JokeModel { Id = 1, Text = "Why do programmers prefer dark mode? Because light attracts bugs.", Premise = "Coding" },
-        new JokeModel { Id = 2, Text = "I told my AI to make a joke about Wi-Fi. It said it couldn't find a connection.", Premise = "Technology" }
-    };
+        await LoadJokes();
+    }
+
+    private async Task LoadJokes()
+    {
+        LiveJokes = await JokeService.GetActiveJokesAsync();
+        StateHasChanged();
+    }
 }
+

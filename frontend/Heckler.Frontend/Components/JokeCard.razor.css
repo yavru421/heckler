@@ -68,3 +68,35 @@
     box-shadow: 0 0 15px var(--neon-red);
     transform: scale(1.05);
 }
+
+.joke-stats {
+    display: flex;
+    gap: 0.8rem;
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+}
+
+.stat {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-family: monospace;
+    display: inline-flex;
+    align-items: center;
+}
+
+.stat.kill {
+    color: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.15);
+}
+
+.stat.bomb {
+    color: #ff0055;
+    border: 1px solid rgba(255, 0, 85, 0.15);
+}
+
+.stat.weight {
+    color: #00f0ff;
+    border: 1px solid rgba(0, 240, 255, 0.15);
+}
+

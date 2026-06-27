@@ -49,7 +49,7 @@
 		{
 			"binding": "DB",
 			"database_name": "heckler-ledger",
-			"database_id": "00000000-0000-0000-0000-000000000000" // Placeholder ID
+			"database_id": "054a359a-b42f-4156-a6ee-6b7a6e7b848c"
 		}
 	],
 	"vectorize": [
@@ -69,7 +69,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["SetlistDurableObject"]
+			"new_sqlite_classes": ["SetlistDurableObject"]
 		}
 	]
 }

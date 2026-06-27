@@ -1,3 +1,5 @@
+@inject JokeService JokeService
+
 <div class="writers-room-container">
     <div class="input-panel glass-panel">
         <h2>Feed the Machine</h2>
@@ -21,21 +23,58 @@
                 <span>Drop the Mic 🎤</span>
             }
         </button>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="error-message">⚠️ @ErrorMessage</p>
+        }
+
+        @if (LastGeneratedJoke != null)
+        {
+            <div class="generated-preview glass-panel">
+                <h3>Last Generated Joke</h3>
+                <p class="preview-text">"@LastGeneratedJoke.Text"</p>
+                <span class="preview-meta">Added to live setlist!</span>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     private string PremiseInput { get; set; } = "";
     private bool IsGenerating { get; set; } = false;
+    private string ErrorMessage { get; set; } = "";
+    private JokeModel? LastGeneratedJoke { get; set; }
 
     private async Task GenerateJoke()
     {
         if (string.IsNullOrWhiteSpace(PremiseInput)) return;
 
         IsGenerating = true;
-        // Simulate API delay
-        await Task.Delay(1500); 
-        IsGenerating = false;
-        PremiseInput = "";
+        ErrorMessage = "";
+        LastGeneratedJoke = null;
+
+        try
+        {
+            var joke = await JokeService.GenerateJokeAsync(PremiseInput);
+            if (joke != null)
+            {
+                LastGeneratedJoke = joke;
+                PremiseInput = "";
+            }
+            else
+            {
+                ErrorMessage = "The comedian is having writer's block (backend error).";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to generate: {ex.Message}";
+        }
+        finally
+        {
+            IsGenerating = false;
+        }
     }
 }
+

@@ -1,8 +1,14 @@
 @using Heckler.Frontend.Models
+@inject JokeService JokeService
 
 <div class="joke-card glass-panel">
     <div class="joke-content">
         <p class="joke-text">"@Joke.Text"</p>
+        <div class="joke-stats">
+            <span class="stat kill">🔥 @Joke.Kills Kills</span>
+            <span class="stat bomb">🍅 @Joke.Bombs Bombs</span>
+            <span class="stat weight">📊 Weight: @Joke.ProbabilityWeight.ToString("F2")</span>
+        </div>
         <span class="joke-meta">Generated from premise: @Joke.Premise</span>
     </div>
     
@@ -18,15 +24,18 @@
 
 @code {
     [Parameter] public JokeModel Joke { get; set; } = new();
-    [Parameter] public EventCallback<JokeModel> OnVoted { get; set; }
+    [Parameter] public EventCallback OnVoted { get; set; }
 
     private async Task OnKill()
     {
-        await OnVoted.InvokeAsync(Joke);
+        await JokeService.RateJokeAsync(Joke.Id, "kill");
+        await OnVoted.InvokeAsync();
     }
 
     private async Task OnBomb()
     {
-        await OnVoted.InvokeAsync(Joke);
+        await JokeService.RateJokeAsync(Joke.Id, "bomb");
+        await OnVoted.InvokeAsync();
     }
 }
+
