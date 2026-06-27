@@ -1,0 +1,70 @@
+.joke-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    animation: slideInUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.joke-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.joke-text {
+    font-size: 1.4rem;
+    font-weight: 500;
+    margin: 0 0 0.5rem 0;
+}
+
+.joke-meta {
+    font-size: 0.9rem;
+    color: var(--neon-purple);
+    opacity: 0.8;
+}
+
+.heckle-controls {
+    display: flex;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.btn-heckle {
+    border: none;
+    border-radius: 50px;
+    padding: 0.8rem 1.5rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-heckle.kill {
+    background: transparent;
+    border: 2px solid var(--neon-green);
+    color: var(--neon-green);
+}
+
+.btn-heckle.kill:hover {
+    background: var(--neon-green);
+    color: var(--bg-base);
+    box-shadow: 0 0 15px var(--neon-green);
+    transform: scale(1.05);
+}
+
+.btn-heckle.bomb {
+    background: transparent;
+    border: 2px solid var(--neon-red);
+    color: var(--neon-red);
+}
+
+.btn-heckle.bomb:hover {
+    background: var(--neon-red);
+    color: #fff;
+    box-shadow: 0 0 15px var(--neon-red);
+    transform: scale(1.05);
+}

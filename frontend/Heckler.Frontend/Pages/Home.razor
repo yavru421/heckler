@@ -1,0 +1,38 @@
+@page "/"
+@using Heckler.Frontend.Components
+
+<div class="heckler-app">
+    <header class="app-header glass-panel">
+        <div class="logo">
+            <h1>HECKL<span class="neon-text">ER</span></h1>
+        </div>
+        <nav class="tabs">
+            <button class="@(ActiveTab == "Stage" ? "active" : "")" @onclick='() => SetTab("Stage")'>
+                🎤 Main Stage
+            </button>
+            <button class="@(ActiveTab == "Writers" ? "active" : "")" @onclick='() => SetTab("Writers")'>
+                ✍️ Writer's Room
+            </button>
+        </nav>
+    </header>
+
+    <main class="app-content">
+        @if (ActiveTab == "Stage")
+        {
+            <MainStage />
+        }
+        else
+        {
+            <WritersRoom />
+        }
+    </main>
+</div>
+
+@code {
+    private string ActiveTab { get; set; } = "Stage";
+
+    private void SetTab(string tab)
+    {
+        ActiveTab = tab;
+    }
+}

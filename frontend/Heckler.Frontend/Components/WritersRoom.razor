@@ -1,0 +1,41 @@
+<div class="writers-room-container">
+    <div class="input-panel glass-panel">
+        <h2>Feed the Machine</h2>
+        <p>Give the AI a premise, a topic, or a setup, and let it work the room.</p>
+        
+        <div class="input-group">
+            <textarea 
+                @bind="PremiseInput" 
+                placeholder="e.g., Working from home with a cat..." 
+                rows="4" 
+                class="premise-input"></textarea>
+        </div>
+        
+        <button class="btn-generate" @onclick="GenerateJoke" disabled="@IsGenerating">
+            @if (IsGenerating)
+            {
+                <span>Generating... 🤖</span>
+            }
+            else
+            {
+                <span>Drop the Mic 🎤</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    private string PremiseInput { get; set; } = "";
+    private bool IsGenerating { get; set; } = false;
+
+    private async Task GenerateJoke()
+    {
+        if (string.IsNullOrWhiteSpace(PremiseInput)) return;
+
+        IsGenerating = true;
+        // Simulate API delay
+        await Task.Delay(1500); 
+        IsGenerating = false;
+        PremiseInput = "";
+    }
+}

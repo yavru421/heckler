@@ -1,0 +1,23 @@
+@using Heckler.Frontend.Models
+
+<div class="stage-container">
+    <div class="stage-header">
+        <h2>Live Feed</h2>
+        <div class="live-indicator"></div>
+    </div>
+    
+    <div class="joke-feed">
+        @foreach (var joke in LiveJokes)
+        {
+            <JokeCard @key="joke.Id" Joke="joke" />
+        }
+    </div>
+</div>
+
+@code {
+    private List<JokeModel> LiveJokes = new()
+    {
+        new JokeModel { Id = 1, Text = "Why do programmers prefer dark mode? Because light attracts bugs.", Premise = "Coding" },
+        new JokeModel { Id = 2, Text = "I told my AI to make a joke about Wi-Fi. It said it couldn't find a connection.", Premise = "Technology" }
+    };
+}

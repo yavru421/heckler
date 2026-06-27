@@ -1,0 +1,32 @@
+@using Heckler.Frontend.Models
+
+<div class="joke-card glass-panel">
+    <div class="joke-content">
+        <p class="joke-text">"@Joke.Text"</p>
+        <span class="joke-meta">Generated from premise: @Joke.Premise</span>
+    </div>
+    
+    <div class="heckle-controls">
+        <button class="btn-heckle kill" @onclick="OnKill">
+            🔥 KILL
+        </button>
+        <button class="btn-heckle bomb" @onclick="OnBomb">
+            🍅 BOMB
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public JokeModel Joke { get; set; } = new();
+    [Parameter] public EventCallback<JokeModel> OnVoted { get; set; }
+
+    private async Task OnKill()
+    {
+        await OnVoted.InvokeAsync(Joke);
+    }
+
+    private async Task OnBomb()
+    {
+        await OnVoted.InvokeAsync(Joke);
+    }
+}
