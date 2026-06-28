@@ -31,7 +31,7 @@ app.post('/api/jokes/generate', async (c) => {
   }
 
   // 1. Generate Joke
-  const response = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
+  const response = await c.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
     messages: [
       { role: 'system', content: 'You are a stand-up comedian. Write a short, punchy joke based on the prompt. Only output the joke itself, no explanations, no setup text, just the joke text.' },
       { role: 'user', content: prompt }
