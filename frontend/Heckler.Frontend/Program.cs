@@ -12,6 +12,11 @@ if (baseAddress.Contains("localhost") || baseAddress.Contains("127.0.0.1"))
 {
     baseAddress = "http://localhost:8787/";
 }
+else
+{
+    // Point to the deployed Cloudflare Worker API in production
+    baseAddress = "https://backend.dondlingergeneralcontracting.workers.dev/";
+}
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(baseAddress) });
 builder.Services.AddScoped<JokeService>();
