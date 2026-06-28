@@ -13,8 +13,8 @@ export interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Enable CORS for all API routes
-app.use('/api/*', cors());
+// Enable CORS for all API routes globally to catch all preflights
+app.use('/*', cors());
 
 // Helper to get Durable Object stub for a setlist
 function getSetlistStub(env: Env, setlistId: string) {
