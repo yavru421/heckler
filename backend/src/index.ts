@@ -24,7 +24,6 @@ function getSetlistStub(env: Env, setlistId: string) {
 
 // 1. AI Joke Generation
 app.post('/api/jokes/generate', async (c) => {
-  // Try to get a user prompt, but if empty, we will use a random topic
   let prompt = "";
   try {
     const body = await c.req.json();
@@ -33,28 +32,49 @@ app.post('/api/jokes/generate', async (c) => {
     // Ignore JSON errors if body is empty
   }
   
+  // If no prompt, let's select a highly diverse random topic from a massive pool
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-    const topics = ["dating in 2026", "cryptocurrency bros", "AI taking our jobs", "weird things people do at the gym", "bad tinder profiles", "office politics", "cloud computing costs", "software engineers", "influencers", "the metaverse"];
-    prompt = topics[Math.floor(Math.random() * topics.length)];
+    const categories = [
+      "existential dread", "weird historical facts", "mundane daily struggles", 
+      "relationships & dating", "conspiracy theories", "bizarre animals", 
+      "time travel struggles", "customer service nightmares", "childhood memories",
+      "superpowers but useless ones", "the absurdity of money", "social awkwardness", 
+      "aging and getting older", "modern hygiene habits", "bizarre food combinations",
+      "aliens visiting Earth", "life in the 1700s", "bad advice from parents",
+      "pet behaviors", "public transport encounters"
+    ];
+    prompt = categories[Math.floor(Math.random() * categories.length)];
   }
 
-  // Fetch top 3 jokes from D1 to use as learning material (RLHF)
-  const { results: topJokes } = await c.env.DB.prepare(
-    'SELECT text FROM jokes WHERE kills > 0 AND (kills - bombs) > 0 ORDER BY kills DESC, RANDOM() LIMIT 3'
+  // To prevent mode collapse (AI getting stuck repeating the same 3 jokes), 
+  // we fetch the top 10 best-rated jokes from D1, then pick 3 at random.
+  // This keeps the training context dynamic and diverse.
+  const { results: topTenJokes } = await c.env.DB.prepare(
+    'SELECT text FROM jokes WHERE kills > 0 AND (kills - bombs) >= 0 ORDER BY (kills - bombs) DESC LIMIT 10'
   ).all();
 
   let learningContext = "";
-  if (topJokes && topJokes.length > 0) {
-    learningContext = "Here are some of your past jokes that the audience LOVED (rated as 'Kill'). Study their comedic timing and structure to learn what this audience likes:\n";
-    topJokes.forEach((j: any) => {
+  if (topTenJokes && topTenJokes.length > 0) {
+    // Pick up to 3 random jokes from the top 10
+    const shuffled = [...topTenJokes].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 3);
+    
+    learningContext = "Here is a rotating sample of jokes the audience rated as 'Kill'. Use them to understand the pacing, style, and punchiness they like:\n";
+    selected.forEach((j: any) => {
       learningContext += `- "${j.text}"\n`;
     });
   }
 
   // 1. Generate Joke
-  const systemPrompt = `You are an edgy, hilarious stand-up comedian. You do not hold back, this is an 18+ explicit comedy club. Write a short, punchy joke based on the prompt.\n\n${learningContext}\n\nOnly output the joke itself, no explanations, no setup text, just the joke text.`;
+  const systemPrompt = `You are a legendary, incredibly diverse stand-up comedian. You do not hold back—this is an 18+ explicit comedy club. 
+Write a short, punchy joke based on the prompt. 
+Be creative, unique, and avoid repeating generic setups. Experiment with different comedy styles (e.g., self-deprecating, observational, absurd, dry wit, storytelling).
 
-  const response = await c.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+${learningContext}
+
+Only output the joke itself, no explanations, no setup text, just the joke text.`;
+
+  const response = await c.env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: `Give me a joke about: ${prompt}` }

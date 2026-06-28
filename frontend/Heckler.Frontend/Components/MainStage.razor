@@ -3,7 +3,7 @@
 
 <div class="stage-container">
     <div class="stage-header">
-        <h2>Live Heckler Feed</h2>
+        <h2>Stage Spotlight</h2>
         <div class="live-indicator"></div>
     </div>
     
@@ -13,20 +13,26 @@
         </button>
     </div>
 
-    <div class="joke-feed">
+    <div class="joke-feed single-spotlight">
         @if (LiveJokes == null)
         {
             <p class="loading-text">Tuning the mic... 🎤</p>
         }
-        else if (LiveJokes.Count == 0)
-        {
-            <p class="empty-text">The stage is empty. Hit the button to get roasted.</p>
-        }
         else
         {
-            @foreach (var joke in LiveJokes)
+            var unratedJokes = LiveJokes.Where(j => !RatedJokeIds.Contains(j.Id)).ToList();
+
+            @if (unratedJokes.Count == 0)
             {
-                <JokeCard @key="joke.Id" Joke="joke" OnVoted="LoadJokes" />
+                <div class="empty-card glass-panel">
+                    <p class="empty-text">The stage is empty. Hit the button to get roasted by the AI.</p>
+                </div>
+            }
+            else
+            {
+                // Only show the single, most recent unrated joke on stage
+                var activeJoke = unratedJokes.First();
+                <JokeCard @key="activeJoke.Id" Joke="activeJoke" OnVoted="() => HandleVote(activeJoke.Id)" />
             }
         }
     </div>
@@ -34,6 +40,7 @@
 
 @code {
     private List<JokeModel>? LiveJokes { get; set; }
+    private HashSet<string> RatedJokeIds { get; set; } = new();
     private bool isGenerating = false;
 
     protected override async Task OnInitializedAsync()
@@ -45,6 +52,12 @@
     {
         LiveJokes = await JokeService.GetActiveJokesAsync();
         StateHasChanged();
+    }
+
+    private async Task HandleVote(string jokeId)
+    {
+        RatedJokeIds.Add(jokeId);
+        await LoadJokes();
     }
 
     private async Task GenerateJoke()
