@@ -2,6 +2,7 @@
 @using Heckler.Frontend.Models
 @using Heckler.Frontend.Services
 @inject JokeService JokeService
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
 <div class="heckler-app">
@@ -21,7 +22,7 @@
                 <p style="font-size: 1.2rem; margin-bottom: 1.5rem;">@activeJoke.Text</p>
                 
                 <div style="margin-top: 1.5rem; background: #222; padding: 1rem; border-radius: 8px;">
-                    <audio id="live-audio" src="/api/jokes/@activeJoke.Id/audio" autoplay controls style="width: 100%;"></audio>
+                    <audio id="live-audio" src="@($"{Http.BaseAddress}api/jokes/{activeJoke.Id}/audio")" autoplay controls style="width: 100%;"></audio>
                 </div>
             }
             else
