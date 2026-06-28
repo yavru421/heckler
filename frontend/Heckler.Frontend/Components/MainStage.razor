@@ -42,8 +42,8 @@
             }
             else
             {
-                // Only show the single, most recent unrated joke on stage
-                var activeJoke = unratedJokes.First();
+                // Prioritize showing the newly generated active joke if it exists and is unrated
+                var activeJoke = unratedJokes.FirstOrDefault(j => j.Id == activeJokeId) ?? unratedJokes.First();
                 <JokeCard @key="activeJoke.Id" Joke="activeJoke" OnVoted="() => HandleVote(activeJoke.Id)" />
             }
         }
@@ -53,6 +53,7 @@
 @code {
     private List<JokeModel>? LiveJokes { get; set; }
     private HashSet<string> RatedJokeIds { get; set; } = new();
+    private string? activeJokeId = null;
     private string selectedType = "standup";
     private bool isGenerating = false;
 
@@ -85,6 +86,10 @@
     private async Task HandleVote(string jokeId)
     {
         RatedJokeIds.Add(jokeId);
+        if (activeJokeId == jokeId)
+        {
+            activeJokeId = null; // Reset spotlight
+        }
         await LoadJokes();
     }
 
@@ -93,7 +98,11 @@
         isGenerating = true;
         StateHasChanged();
         
-        await JokeService.GenerateJokeAsync(selectedType);
+        var newJoke = await JokeService.GenerateJokeAsync(selectedType);
+        if (newJoke != null)
+        {
+            activeJokeId = newJoke.Id;
+        }
         await LoadJokes();
         
         isGenerating = false;
