@@ -24,7 +24,7 @@
         }
         else
         {
-            @foreach (var joke in LiveJokes.OrderByDescending(j => j.CreatedAt))
+            @foreach (var joke in LiveJokes)
             {
                 <JokeCard @key="joke.Id" Joke="joke" OnVoted="LoadJokes" />
             }
