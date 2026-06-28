@@ -40,11 +40,11 @@ namespace Heckler.Frontend.Services
             }
         }
 
-        public async Task<JokeModel?> GenerateJokeAsync()
+        public async Task<JokeModel?> GenerateJokeAsync(string type)
         {
             try
             {
-                var response = await _http.PostAsJsonAsync("api/jokes/generate", new { });
+                var response = await _http.PostAsJsonAsync("api/jokes/generate", new { type });
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<JokeModel>();

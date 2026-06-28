@@ -7,9 +7,21 @@
         <div class="live-indicator"></div>
     </div>
     
+    <div class="mode-selector glass-panel">
+        <button class="mode-btn @(selectedType == "standup" ? "active" : "")" @onclick='() => SetType("standup")'>
+            🎙️ Standup
+        </button>
+        <button class="mode-btn @(selectedType == "dictionary" ? "active" : "")" @onclick='() => SetType("dictionary")'>
+            📖 Urban Dict
+        </button>
+        <button class="mode-btn @(selectedType == "roast" ? "active" : "")" @onclick='() => SetType("roast")'>
+            🔥 Insult Roast
+        </button>
+    </div>
+
     <div class="joke-actions">
-        <button class="btn-primary" @onclick="GenerateJoke" disabled="@isGenerating">
-            @(isGenerating ? "Cooking up some spice... 🌶️" : "Get a New Joke 🎤")
+        <button class="btn-generate" @onclick="GenerateJoke" disabled="@isGenerating">
+            @(isGenerating ? "Cooking... 🌶️" : $"Generate {GetFriendlyTypeName(selectedType)} 🎤")
         </button>
     </div>
 
@@ -41,6 +53,7 @@
 @code {
     private List<JokeModel>? LiveJokes { get; set; }
     private HashSet<string> RatedJokeIds { get; set; } = new();
+    private string selectedType = "standup";
     private bool isGenerating = false;
 
     protected override async Task OnInitializedAsync()
@@ -54,6 +67,21 @@
         StateHasChanged();
     }
 
+    private void SetType(string type)
+    {
+        selectedType = type;
+    }
+
+    private string GetFriendlyTypeName(string type)
+    {
+        return type switch
+        {
+            "dictionary" => "Urban Definition",
+            "roast" => "Insult Roast",
+            _ => "Standup Joke"
+        };
+    }
+
     private async Task HandleVote(string jokeId)
     {
         RatedJokeIds.Add(jokeId);
@@ -65,7 +93,7 @@
         isGenerating = true;
         StateHasChanged();
         
-        await JokeService.GenerateJokeAsync();
+        await JokeService.GenerateJokeAsync(selectedType);
         await LoadJokes();
         
         isGenerating = false;

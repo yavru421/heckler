@@ -25,59 +25,97 @@ function getSetlistStub(env: Env, setlistId: string) {
 // 1. AI Joke Generation
 app.post('/api/jokes/generate', async (c) => {
   let prompt = "";
+  let genType = "standup"; // Default type
+
   try {
     const body = await c.req.json();
     prompt = body.prompt || "";
+    genType = body.type || "standup";
   } catch (e) {
     // Ignore JSON errors if body is empty
   }
   
-  // If no prompt, let's select a highly diverse random topic from a massive pool
-  if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
-    const categories = [
-      "existential dread", "weird historical facts", "mundane daily struggles", 
-      "relationships & dating", "conspiracy theories", "bizarre animals", 
-      "time travel struggles", "customer service nightmares", "childhood memories",
-      "superpowers but useless ones", "the absurdity of money", "social awkwardness", 
-      "aging and getting older", "modern hygiene habits", "bizarre food combinations",
-      "aliens visiting Earth", "life in the 1700s", "bad advice from parents",
-      "pet behaviors", "public transport encounters"
-    ];
-    prompt = categories[Math.floor(Math.random() * categories.length)];
+  // Validate genType
+  if (!["standup", "dictionary", "roast"].includes(genType)) {
+    genType = "standup";
   }
 
   // To prevent mode collapse (AI getting stuck repeating the same 3 jokes), 
   // we fetch the top 10 best-rated jokes from D1, then pick 3 at random.
-  // This keeps the training context dynamic and diverse.
+  // We filter by type so standup learns from standup, dict from dict, etc.
   const { results: topTenJokes } = await c.env.DB.prepare(
-    'SELECT text FROM jokes WHERE kills > 0 AND (kills - bombs) >= 0 ORDER BY (kills - bombs) DESC LIMIT 10'
-  ).all();
+    'SELECT text FROM jokes WHERE kills > 0 AND (kills - bombs) >= 0 AND premise LIKE ? ORDER BY (kills - bombs) DESC LIMIT 10'
+  ).bind(`[${genType}]%`).all();
 
   let learningContext = "";
   if (topTenJokes && topTenJokes.length > 0) {
-    // Pick up to 3 random jokes from the top 10
     const shuffled = [...topTenJokes].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, 3);
     
-    learningContext = "Here is a rotating sample of jokes the audience rated as 'Kill'. Use them to understand the pacing, style, and punchiness they like:\n";
+    learningContext = `Here is a rotating sample of your highly-rated ${genType} content. Emulate this style and edge:\n`;
     selected.forEach((j: any) => {
       learningContext += `- "${j.text}"\n`;
     });
   }
 
-  // 1. Generate Joke
-  const systemPrompt = `You are a legendary, incredibly diverse stand-up comedian. You do not hold back—this is an 18+ explicit comedy club. 
+  let systemPrompt = "";
+  let userInstruction = "";
+
+  if (genType === "dictionary") {
+    // Urban Dictionary style
+    const terms = ["software engineer", "crypto bro", "influencer", "middle manager", "tinder gold", "crossfit", "scrum master", "consultant", "nepotism baby", "quiet quitting", "microdosing", "AI wrapper", "hustle culture", "corporate synergy"];
+    const term = terms[Math.floor(Math.random() * terms.length)];
+    
+    systemPrompt = `You are a savage, explicit 18+ version of Urban Dictionary. 
+Your goal is to define modern slang, trends, or careers with extreme sarcasm and brutal honesty. 
+
+${learningContext}
+
+Output format must be exactly:
+Word: [Word]
+Definition: [Sarcastic, hilarious definition]`;
+    userInstruction = `Define the term: ${term}`;
+    prompt = `[dictionary] ${term}`; // Store category in premise
+  } 
+  else if (genType === "roast") {
+    // Insult comedy style
+    const topics = ["dating apps", "corporate jobs", "buying a house in 2026", "social media", "self-help books", "people who drink IPAs", "LinkedIn influencers", "startup founders", "group chats", "gym culture"];
+    const topic = topics[Math.floor(Math.random() * topics.length)];
+
+    systemPrompt = `You are an insult comic doing brutal crowd-work. 
+Write a sharp, direct, explicit 18+ one-sentence roast about the topic. Make it sting.
+
+${learningContext}
+
+Only output the roast itself, no intro, no filler.`;
+    userInstruction = `Roast this: ${topic}`;
+    prompt = `[roast] ${topic}`;
+  } 
+  else {
+    // Standup style
+    const categories = [
+      "existential dread", "weird historical facts", "mundane daily struggles", 
+      "relationships & dating", "conspiracy theories", "bizarre animals", 
+      "time travel struggles", "customer service nightmares", "childhood memories",
+      "superpowers but useless ones", "the absurdity of money", "social awkwardness"
+    ];
+    const category = categories[Math.floor(Math.random() * categories.length)];
+
+    systemPrompt = `You are a legendary, incredibly diverse stand-up comedian. You do not hold back—this is an 18+ explicit comedy club. 
 Write a short, punchy joke based on the prompt. 
-Be creative, unique, and avoid repeating generic setups. Experiment with different comedy styles (e.g., self-deprecating, observational, absurd, dry wit, storytelling).
+Be creative, unique, and avoid repeating generic setups. Experiment with different comedy styles (e.g., self-deprecating, observational, absurd, dry wit).
 
 ${learningContext}
 
 Only output the joke itself, no explanations, no setup text, just the joke text.`;
+    userInstruction = `Give me a joke about: ${category}`;
+    prompt = `[standup] ${category}`;
+  }
 
   const response = await c.env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Give me a joke about: ${prompt}` }
+      { role: 'user', content: userInstruction }
     ]
   });
 
