@@ -310,5 +310,14 @@ app.get('/api/jokes/:id/audio', async (c) => {
   });
 });
 
-export default app;
+// 6. Routine Reviews
+app.post('/api/routines/rate', async (c) => {
+  const { rating, comment } = await c.req.json();
+  const reviewId = crypto.randomUUID();
+  await c.env.DB.prepare(
+    'INSERT INTO routine_reviews (id, rating, comment) VALUES (?, ?, ?)'
+  ).bind(reviewId, rating || 0, comment || "").run();
+  return c.json({ success: true, id: reviewId });
+});
 
+export default app;

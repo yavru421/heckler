@@ -56,5 +56,18 @@ namespace Heckler.Frontend.Services
             }
             return null;
         }
+        public async Task<bool> RateRoutineAsync(int rating, string comment)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/routines/rate", new { rating, comment });
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error rating routine: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
