@@ -3,10 +3,16 @@
 
 <div class="stage-container">
     <div class="stage-header">
-        <h2>Live Feed</h2>
+        <h2>Live Heckler Feed</h2>
         <div class="live-indicator"></div>
     </div>
     
+    <div class="joke-actions">
+        <button class="btn-primary" @onclick="GenerateJoke" disabled="@isGenerating">
+            @(isGenerating ? "Cooking up some spice... 🌶️" : "Get a New Joke 🎤")
+        </button>
+    </div>
+
     <div class="joke-feed">
         @if (LiveJokes == null)
         {
@@ -14,11 +20,11 @@
         }
         else if (LiveJokes.Count == 0)
         {
-            <p class="empty-text">No jokes on the setlist yet. Go to the Writer's Room and feed the machine! 🤖</p>
+            <p class="empty-text">The stage is empty. Hit the button to get roasted.</p>
         }
         else
         {
-            @foreach (var joke in LiveJokes)
+            @foreach (var joke in LiveJokes.OrderByDescending(j => j.CreatedAt))
             {
                 <JokeCard @key="joke.Id" Joke="joke" OnVoted="LoadJokes" />
             }
@@ -28,6 +34,7 @@
 
 @code {
     private List<JokeModel>? LiveJokes { get; set; }
+    private bool isGenerating = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -37,6 +44,18 @@
     private async Task LoadJokes()
     {
         LiveJokes = await JokeService.GetActiveJokesAsync();
+        StateHasChanged();
+    }
+
+    private async Task GenerateJoke()
+    {
+        isGenerating = true;
+        StateHasChanged();
+        
+        await JokeService.GenerateJokeAsync();
+        await LoadJokes();
+        
+        isGenerating = false;
         StateHasChanged();
     }
 }

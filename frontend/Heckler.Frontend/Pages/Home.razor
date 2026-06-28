@@ -5,34 +5,11 @@
     <header class="app-header glass-panel">
         <div class="logo">
             <h1>HECKL<span class="neon-text">ER</span></h1>
+            <div class="age-warning">🔞 18+ EXPLICIT COMEDY ONLY</div>
         </div>
-        <nav class="tabs">
-            <button class="@(ActiveTab == "Stage" ? "active" : "")" @onclick='() => SetTab("Stage")'>
-                🎤 Main Stage
-            </button>
-            <button class="@(ActiveTab == "Writers" ? "active" : "")" @onclick='() => SetTab("Writers")'>
-                ✍️ Writer's Room
-            </button>
-        </nav>
     </header>
 
     <main class="app-content">
-        @if (ActiveTab == "Stage")
-        {
-            <MainStage />
-        }
-        else
-        {
-            <WritersRoom />
-        }
+        <MainStage />
     </main>
 </div>
-
-@code {
-    private string ActiveTab { get; set; } = "Stage";
-
-    private void SetTab(string tab)
-    {
-        ActiveTab = tab;
-    }
-}

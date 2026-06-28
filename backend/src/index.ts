@@ -24,17 +24,40 @@ function getSetlistStub(env: Env, setlistId: string) {
 
 // 1. AI Joke Generation
 app.post('/api/jokes/generate', async (c) => {
-  const { prompt } = await c.req.json();
+  // Try to get a user prompt, but if empty, we will use a random topic
+  let prompt = "";
+  try {
+    const body = await c.req.json();
+    prompt = body.prompt || "";
+  } catch (e) {
+    // Ignore JSON errors if body is empty
+  }
   
-  if (!prompt || typeof prompt !== 'string') {
-    return c.json({ error: 'Prompt is required' }, 400);
+  if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+    const topics = ["dating in 2026", "cryptocurrency bros", "AI taking our jobs", "weird things people do at the gym", "bad tinder profiles", "office politics", "cloud computing costs", "software engineers", "influencers", "the metaverse"];
+    prompt = topics[Math.floor(Math.random() * topics.length)];
+  }
+
+  // Fetch top 3 jokes from D1 to use as learning material (RLHF)
+  const { results: topJokes } = await c.env.DB.prepare(
+    'SELECT text FROM jokes WHERE kills > 0 AND (kills - bombs) > 0 ORDER BY kills DESC, RANDOM() LIMIT 3'
+  ).all();
+
+  let learningContext = "";
+  if (topJokes && topJokes.length > 0) {
+    learningContext = "Here are some of your past jokes that the audience LOVED (rated as 'Kill'). Study their comedic timing and structure to learn what this audience likes:\n";
+    topJokes.forEach((j: any) => {
+      learningContext += `- "${j.text}"\n`;
+    });
   }
 
   // 1. Generate Joke
+  const systemPrompt = `You are an edgy, hilarious stand-up comedian. You do not hold back, this is an 18+ explicit comedy club. Write a short, punchy joke based on the prompt.\n\n${learningContext}\n\nOnly output the joke itself, no explanations, no setup text, just the joke text.`;
+
   const response = await c.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
     messages: [
-      { role: 'system', content: 'You are a stand-up comedian. Write a short, punchy joke based on the prompt. Only output the joke itself, no explanations, no setup text, just the joke text.' },
-      { role: 'user', content: prompt }
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Give me a joke about: ${prompt}` }
     ]
   });
 
@@ -134,6 +157,16 @@ app.post('/api/setlists/:id/rate', async (c) => {
     await c.env.DB.prepare('UPDATE jokes SET kills = kills + 1 WHERE id = ?').bind(jokeId).run();
   } else {
     await c.env.DB.prepare('UPDATE jokes SET bombs = bombs + 1 WHERE id = ?').bind(jokeId).run();
+    
+    // Check if the joke is bombing too much
+    const { results } = await c.env.DB.prepare('SELECT kills, bombs FROM jokes WHERE id = ?').bind(jokeId).all();
+    if (results && results.length > 0) {
+      const { kills, bombs } = results[0] as any;
+      if (bombs > kills + 3) {
+        // Delete from Vectorize so the AI forgets it
+        await c.env.JOKE_VAULT.deleteByIds([jokeId]);
+      }
+    }
   }
 
   // 3. Forward the rating request to the Durable Object
