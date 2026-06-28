@@ -9,6 +9,7 @@ export interface Env {
   DB: D1Database;
   JOKE_VAULT: VectorizeIndex;
   SETLIST_DO: DurableObjectNamespace;
+  GROQ_API_KEY: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -24,9 +25,10 @@ function getSetlistStub(env: Env, setlistId: string) {
 
 // 1. AI Joke Generation
 app.post('/api/jokes/generate', async (c) => {
-  let prompt = "";
-  let genType = "standup"; // Default type
-  let hecklePrompt = "";
+    let prompt = "";
+    let genType = "standup"; // Default type
+    let hecklePrompt = "";
+    let sessionId = "";
 
   try {
     const body = await c.req.json();
@@ -34,6 +36,7 @@ app.post('/api/jokes/generate', async (c) => {
     prompt = body.prompt || "";
     genType = body.type || "standup";
     hecklePrompt = body.hecklePrompt || "";
+    sessionId = body.sessionId || "";
   } catch (e: any) {
     console.error("Failed to parse request JSON:", e.message || e);
   }
@@ -61,14 +64,88 @@ app.post('/api/jokes/generate', async (c) => {
     });
   }
 
+  // Feature: Context-Aware Callbacks
+  // Grab the absolute best joke from the current SetlistDO to weave a callback
+  let callbackContext = "";
+  if (genType === "standup") {
+    try {
+      const stub = getSetlistStub(c.env, 'global-setlist');
+      const doResponse = await stub.fetch('http://do/jokes');
+      const activeJokes = await doResponse.json() as any[];
+      if (activeJokes.length > 0) {
+        // Sort by probabilityWeight descending
+        activeJokes.sort((a, b) => b.probabilityWeight - a.probabilityWeight);
+        const topJokeId = activeJokes[0].id;
+        const { results: topJokeDb } = await c.env.DB.prepare('SELECT text FROM jokes WHERE id = ?').bind(topJokeId).all();
+        if (topJokeDb && topJokeDb.length > 0) {
+          const topJokeText = (topJokeDb[0] as any).text;
+          callbackContext = `\n[CALLBACK TARGET]: Earlier in your set, you made this joke: "${topJokeText}". Seamlessly weave a subtle callback to this premise into your new punchline to reward the audience.`;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to get callback", e);
+    }
+  }
+
+  // Feature: Heckler Profiles
+  let hecklerProfileContext = "";
+  if (hecklePrompt && sessionId) {
+    try {
+      const { results: profile } = await c.env.DB.prepare('SELECT traits FROM heckler_profiles WHERE session_id = ?').bind(sessionId).all();
+      if (profile && profile.length > 0) {
+        const traits = (profile[0] as any).traits;
+        hecklerProfileContext = `\n[HECKLER INTEL]: You recognize this heckler. You know their traits are: "${traits}". Use this personal information to completely destroy them in your comeback.`;
+      }
+
+      // Background task to extract a trait from this new heckle and append it to their profile
+      c.executionCtx.waitUntil((async () => {
+        try {
+          const traitFetch = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${c.env.GROQ_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'llama-3.1-8b-instant',
+              messages: [
+                { role: 'system', content: 'Extract a short, 2-5 word personality trait or topic from this heckle. Only output the words.' },
+                { role: 'user', content: hecklePrompt }
+              ]
+            })
+          });
+          const traitData = await traitFetch.json() as any;
+          const newTrait = (traitData.choices?.[0]?.message?.content || "").trim();
+          if (newTrait) {
+            const currentTraits = profile && profile.length > 0 ? (profile[0] as any).traits + ", " + newTrait : newTrait;
+            await c.env.DB.prepare(
+              'INSERT INTO heckler_profiles (session_id, traits) VALUES (?, ?) ON CONFLICT(session_id) DO UPDATE SET traits = ?'
+            ).bind(sessionId, currentTraits, currentTraits).run();
+          }
+        } catch(e) {}
+      })());
+    } catch (e) {
+      console.error("Failed to process heckler profile", e);
+    }
+  }
+
   let systemPrompt = "";
   let userInstruction = "";
 
+  const personas = [
+    "You are a cynical, angry comedian (like Bill Burr). Do not hold back. This is an unfiltered, R-rated comedy space. You are expected to tackle mature, taboo, and controversial topics with sharp, dark humor. You use misdirection and aggressive observations.",
+    "You are a deadpan, absurdist comedian (like Anthony Jeselnik). Do not hold back. This is an unfiltered, R-rated comedy space. You are expected to tackle mature, taboo, and dark topics with shocking punchlines. You deliver offensive one-liners with zero emotion.",
+    "You are a neurotic, self-deprecating comedian but completely unhinged and explicit. Do not hold back. This is an unfiltered, R-rated comedy space. Your humor comes from deeply inappropriate personal anecdotes, taboo thoughts, and over-analyzing dark topics."
+  ];
+  const selectedPersona = personas[Math.floor(Math.random() * personas.length)];
+
   if (hecklePrompt) {
-    systemPrompt = `You are an aggressive stand-up comedian dealing with a heckler. The heckler just yelled: "${hecklePrompt}".
-Your goal is to completely destroy them with a witty, savage, explicit 18+ comeback.
+    systemPrompt = `${selectedPersona}
+A heckler just yelled: "${hecklePrompt}".
+Your goal is to destroy them with a witty, savage comeback. Do NOT just string together curse words. Use irony, condescension, and a sharp punchline to humiliate them intellectually.
 
 ${learningContext}
+${hecklerProfileContext}
 
 Only output the comeback itself, no explanations, no setup text, just the comeback.`;
     userInstruction = `Destroy this heckle: ${hecklePrompt}`;
@@ -76,11 +153,12 @@ Only output the comeback itself, no explanations, no setup text, just the comeba
   } 
   else if (genType === "dictionary") {
     // Urban Dictionary style
-    const terms = ["software engineer", "crypto bro", "influencer", "middle manager", "tinder gold", "crossfit", "scrum master", "consultant", "nepotism baby", "quiet quitting", "microdosing", "AI wrapper", "hustle culture", "corporate synergy"];
+    const terms = ["AI relationships", "QR code menus", "people who clap when the plane lands", "LinkedIn humblebrags", "$15 green juices", "open floor plan offices", "crypto influencers", "corporate wellness retreats", "modern dating apps", "mandatory fun", "digital nomads", "unpaid internships"];
     const term = terms[Math.floor(Math.random() * terms.length)];
     
-    systemPrompt = `You are a savage, explicit 18+ version of Urban Dictionary. 
-Your goal is to define modern slang, trends, or careers with extreme sarcasm and brutal honesty. 
+    systemPrompt = `${selectedPersona}
+Your goal is to define a modern term like a highly sarcastic Urban Dictionary entry. 
+Focus on brutal honesty and unexpected punchlines. Do not be generic.
 
 ${learningContext}
 
@@ -92,11 +170,12 @@ Definition: [Sarcastic, hilarious definition]`;
   } 
   else if (genType === "roast") {
     // Insult comedy style
-    const topics = ["dating apps", "corporate jobs", "buying a house in 2026", "social media", "self-help books", "people who drink IPAs", "LinkedIn influencers", "startup founders", "group chats", "gym culture"];
+    const topics = ["hustle culture", "people who buy NFTs", "adults who still use Snapchat", "obsessive gym bros", "people who talk to their dogs in baby voices", "self-proclaimed foodies", "overpriced weddings", "people who listen to podcasts on 2x speed"];
     const topic = topics[Math.floor(Math.random() * topics.length)];
 
-    systemPrompt = `You are an insult comic doing brutal crowd-work. 
-Write a sharp, direct, explicit 18+ one-sentence roast about the topic. Make it sting.
+    systemPrompt = `${selectedPersona}
+You are doing crowd-work and roasting this topic. 
+Write a sharp, direct one-sentence roast. Focus on misdirection and painful truths rather than just swearing.
 
 ${learningContext}
 
@@ -107,45 +186,80 @@ Only output the roast itself, no intro, no filler.`;
   else {
     // Standup style
     const categories = [
-      "existential dread", "weird historical facts", "mundane daily struggles", 
-      "relationships & dating", "conspiracy theories", "bizarre animals", 
-      "time travel struggles", "customer service nightmares", "childhood memories",
-      "superpowers but useless ones", "the absurdity of money", "social awkwardness"
+      "the horror of self-checkout machines", "pretending to work from home", "the anxiety of leaving a voicemail", 
+      "why modern movies are too long", "the uselessness of umbrellas", "trying to cancel a gym membership", 
+      "the nightmare of group dinners", "why sleep is just a free trial of death", "the tragedy of adult friendships",
+      "overthinking a two-word text message"
     ];
     const category = categories[Math.floor(Math.random() * categories.length)];
 
-    systemPrompt = `You are a legendary, incredibly diverse stand-up comedian. You do not hold back—this is an 18+ explicit comedy club. 
-Write a short, punchy joke based on the prompt. 
-Be creative, unique, and avoid repeating generic setups. Experiment with different comedy styles (e.g., self-deprecating, observational, absurd, dry wit).
+    systemPrompt = `${selectedPersona}
+Write a short, punchy stand-up joke based on the prompt. 
+Use a clear setup and punchline structure. Be creative, unique, and avoid generic comedy tropes. Rely on clever observation instead of just shock value.
 
 ${learningContext}
+${callbackContext}
 
 Only output the joke itself, no explanations, no setup text, just the joke text.`;
     userInstruction = `Give me a joke about: ${category}`;
     prompt = `[standup] ${category}`;
   }
 
-  const response = await c.env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userInstruction }
-    ]
-  });
+  // Feature: Joke Vault Recycling (Save computation time)
+  if (!hecklePrompt && genType === "standup" && Math.random() < 0.8) {
+    try {
+      // Pull a proven killer joke from the DB
+      const { results: recycled } = await c.env.DB.prepare(
+        'SELECT id, text, premise FROM jokes WHERE (kills - bombs) > 0 AND premise LIKE ? ORDER BY RANDOM() LIMIT 1'
+      ).bind(`[standup]%`).all();
 
-  const jokeText = response.response || response.text;
+      if (recycled && recycled.length > 0) {
+        const joke = recycled[0] as any;
+        
+        // Add to active setlist DO
+        const stub = getSetlistStub(c.env, 'global-setlist');
+        await stub.fetch(new Request('http://do/add', {
+          method: 'POST',
+          body: JSON.stringify({ jokeId: joke.id })
+        }));
+
+        console.log("Recycled joke:", joke.id);
+        return c.json({ id: joke.id, text: joke.text, premise: joke.premise });
+      }
+    } catch(e) {
+      console.error("Recycling failed", e);
+    }
+  }
+
+  const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${c.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userInstruction }
+      ]
+    })
+  });
+  const groqData = await groqResponse.json() as any;
+  const jokeText = groqData.choices?.[0]?.message?.content;
+
   if (!jokeText) {
-    return c.json({ error: 'Failed to generate joke' }, 500);
+    return c.json({ error: 'Failed to generate joke via Groq' }, 500);
   }
 
   // 2. Generate Embedding (bge-small-en-v1.5 has 384 dimensions)
-  const embeddingResponse = await c.env.AI.run('@cf/baai/bge-small-en-v1.5', {
-    text: jokeText
-  });
-  
-  const embedding = embeddingResponse.data?.[0];
-  if (!embedding) {
-    return c.json({ error: 'Failed to generate embedding' }, 500);
-  }
+  let embedding = new Array(384).fill(0.01);
+  try {
+    const embeddingResponse = await c.env.AI.run('@cf/baai/bge-small-en-v1.5', { text: jokeText });
+    if (embeddingResponse.data?.[0]) {
+      embedding = embeddingResponse.data[0];
+    }
+  } catch(e) {}
 
   // 3. Save to D1
   const jokeId = crypto.randomUUID();
@@ -298,16 +412,57 @@ app.get('/api/jokes/:id/audio', async (c) => {
   }
 
   const jokeText = (results[0] as any).text;
+  const truncatedText = jokeText.substring(0, 500);
 
-  const audioResponse = await c.env.AI.run('@cf/deepgram/aura-1', {
-    text: jokeText
-  });
+  try {
+    // 1. Try Groq TTS (or Neron/ElevenLabs if configured)
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${c.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'eleven-turbo-v2', // Fallback placeholder if Groq bridges it
+        input: truncatedText,
+        voice: 'alloy'
+      })
+    });
 
-  return new Response(audioResponse, {
-    headers: {
-      'Content-Type': 'audio/wav',
+    if (!groqResponse.ok) {
+      throw new Error('Groq/Neron TTS limit reached or unavailable');
     }
-  });
+
+    return new Response(groqResponse.body, {
+      headers: { 'Content-Type': 'audio/mpeg' }
+    });
+  } catch (e) {
+    console.warn("Primary TTS failed, falling back to Cloudflare...", e);
+    
+    try {
+      // 2. Fallback to Cloudflare AI TTS
+      const audioResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
+        text: truncatedText
+      });
+      
+      return new Response(audioResponse, {
+        headers: { 'Content-Type': 'audio/wav' }
+      });
+    } catch (cfError) {
+      console.warn("Cloudflare TTS failed, falling back to StreamElements...", cfError);
+      
+      // 3. Ultimate Fallback to StreamElements
+      try {
+        const ttsUrl = `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(truncatedText)}`;
+        const ttsResponse = await fetch(ttsUrl);
+        return new Response(ttsResponse.body, {
+          headers: { 'Content-Type': 'audio/mpeg' }
+        });
+      } catch (finalError) {
+        return c.json({ error: 'All audio fallbacks failed' }, 500);
+      }
+    }
+  }
 });
 
 // 6. Routine Reviews
