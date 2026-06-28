@@ -3,14 +3,20 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Heckler.Frontend</title>
     <base href="/" />
+    
+    <!-- Apple PWA Standalone Mode Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Heckler.Frontend.styles.css" rel="stylesheet" />
+    <link href="manifest.webmanifest" rel="manifest" />
     <script type="importmap"></script>
 </head>
 
@@ -29,6 +35,32 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>
+        // Request persistent storage defensively for iOS 7-day eviction
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().then(granted => {
+                if (granted) console.log("Storage will not be cleared except by explicit user action");
+                else console.log("Storage may be cleared by the UA under storage pressure.");
+            });
+        }
+
+        navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(registration => {
+            registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                if (installingWorker == null) {
+                    return;
+                }
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed') {
+                        if (navigator.serviceWorker.controller) {
+                            // A new service worker has been installed and is ready to take over.
+                            console.log('New or updated content is available. Please refresh the page to update.');
+                        }
+                    }
+                };
+            };
+        });
+    </script>
 </body>
 
 </html>

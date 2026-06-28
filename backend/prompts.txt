@@ -1,0 +1,549 @@
+<USER_REQUEST>
+I am building a live, crowd-sourced comedy web app called **Heckler** at my custom domain `heckler.dondlingergc.com`. The AI acts as a stand-up comedian and the users act as the audience, voting "Kill" or "Bomb" on jokes in real-time.
+
+The project is already scaffolded locally at `C:\dev\heckler` and pushed to GitHub at `https://github.com/yavru421/heckler.git`. 
+
+**Here is what is ALREADY DONE:**
+1. **Frontend (Blazor WebAssembly):** The UI shell is built (`frontend/Heckler.Frontend`). It features a rich, dark-mode comedy club aesthetic with glassmorphism. The `MainStage`, `JokeCard`, and `WritersRoom` components are created, but currently use mock data and empty click handlers.
+2. **Backend (Cloudflare Workers):** The worker is scaffolded (`backend/`). 
+   - `wrangler.jsonc` is configured with bindings for Workers AI, D1, Vectorize, and Durable Objects.
+   - `src/index.ts` has a Hono API gateway skeleton mapped out for joke generation and voting.
+   - `src/SetlistDO.ts` is created and handles the core probability math for adjusting joke weights in memory when "Kill" or "Bomb" votes are received.
+
+**Here is what is NOT DONE and what we need to focus on next:**
+1. **Database & Migrations (D1 & Vectorize):** We need to define the D1 SQL schema for storing the permanent ledger of jokes and user interactions, create the migrations, and initialize the Vectorize index for semantic joke search.
+2. **Workers AI Integration:** We need to implement the actual logic in `index.ts` to call `@cf/meta/llama-3-8b-instruct` to generate jokes, generate embeddings using the text embedding model, and store them in Vectorize/D1.
+3. **Frontend-to-Backend Wiring:** We need to implement an `HttpClient` service in the Blazor frontend to replace the mock data. It needs to fetch the active setlist from the Cloudflare Worker and send the live "Kill"/"Bomb" ratings to the Durable Object.
+4. **Deployment:** Finally, we need to deploy the Blazor WASM app to Cloudflare Pages and the Worker backend to Cloudflare Workers using the custom domain.
+
+Please acknowledge you understand the architecture. I'd like to start by tackling the **Database & Migrations (D1 & Vectorize)** step.
+
+
+and i dont plan on upgrading my cloudflare from the standard options
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:48:20-05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 3.5 Flash (Low). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
+
+---
+
+<USER_REQUEST>
+proceed
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:50:07-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+well im not sure you even know what the fuck is going on because: 2026-06-27T23:49:01.208Z	Initializing build environment...
+2026-06-27T23:49:02.994Z	Success: Finished initializing build environment
+2026-06-27T23:49:03.430Z	Cloning repository...
+2026-06-27T23:49:04.763Z	No build output detected to cache. Skipping.
+2026-06-27T23:49:04.763Z	No dependencies detected to cache. Skipping.
+2026-06-27T23:49:04.765Z	Detected the following tools from environment: 
+2026-06-27T23:49:04.867Z	Executing user deploy command: npx wrangler deploy
+2026-06-27T23:49:06.715Z	npm warn exec The following package was not found and will be installed: wrangler@4.105.0
+2026-06-27T23:49:15.638Z	
+2026-06-27T23:49:15.639Z	 ⛅️ wrangler 4.105.0
+2026-06-27T23:49:15.639Z	────────────────────
+2026-06-27T23:49:15.773Z	
+2026-06-27T23:49:15.773Z	Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-06-27T23:49:15.773Z	
+2026-06-27T23:49:15.858Z	✘ [ERROR] Could not detect a directory containing static files (e.g. html, css and js) for the project
+2026-06-27T23:49:15.860Z	
+2026-06-27T23:49:15.861Z	
+2026-06-27T23:49:15.922Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-06-27_23-49-15_161.log"
+2026-06-27T23:49:16.033Z	Failed: error occurred while running deploy command
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:53:33-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+you should be able to do this, i already did custom domain stuff 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:53:59-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+why dont we just let it auto deploy with giuthu
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:55:46-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+what the fuck. DID YOU NOT USE THE TEMPLATE???>?>>?????
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:57:23-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+YOU STILL OFF!!! I SHOULDNT HAVE TO DO SHIT. IT LITERALLY WILL BE THE 8-9TH LIVE DEPLOYMENT FROM THIS TEMPLATE AND SHOULD BE NOT ANISSUE WHAT THE FUCK
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T18:58:49-05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from Gemini 3.5 Flash (Low) to Gemini 3.1 Pro (Low). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
+
+---
+
+<USER_REQUEST>
+I SPOSE NOW I NEED TO UNDO THE BUILD CMD AND SHIT YOU HAD ME CHANGE
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:00:12-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+I ALSO FEEL LIKE LITERALLY SO FUCKING MUCH WAS GLOSSED OVER AND PROBALBLY NOT EVE DEVELOPED!!!!!! is heckler even gonna fucking do shit right now
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:02:02-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+but I HAVENT EVEN MADE A FUCKING DATA BASE FOR IT YET YOU STUPID FUCK I KNEW IT
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:03:01-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+OK. IF THIS IS THE CASE THEN WTF WAS THE ISSUE BEFORE
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:03:46-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+i trited to give it a joke and errored. PLEASE STOP FUCKING AROUND AND ACTUALLY DO EVERYTHING NEEDED RIGHT NOW. THATS THE ENTIRE FUCKIN GPOINT OF THE GOD DAMN TEMPLATER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! /delegate 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:07:54-05:00.
+
+The user has mentioned some items in the form @[ITEM]. Here is extra information about the items that were mentioned by the user, in the order that they appear:
+
+/delegate is a [Slash Command]:
+<SKILL>The user requested you read and use the "delegate" skill. The path to the skill file is:
+C:\Users\John\.gemini\config\skills\delegate\SKILL.md</SKILL>
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+add/push to github???
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:13:26-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+i had more of a vision that 'heckler' would be more like the one prompting user and then getting a rating after a joke to anyone who visit
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:14:23-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+i think heckler is a good name but i want to focus not so much on heckling and more on becoming funny as fuck based on ratings users provide 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:15:59-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+ok. please please please make sure this and we can even put on the app somehwere, 18yearsolder+ 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:17:11-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+2026-06-28T00:21:40.536Z	Initializing build environment...
+2026-06-28T00:21:43.988Z	Success: Finished initializing build environment
+2026-06-28T00:21:45.227Z	Cloning repository...
+2026-06-28T00:21:40.536Z	Initializing build environment...
+2026-06-28T00:21:43.988Z	Success: Finished initializing build environment
+2026-06-28T00:21:45.227Z	Cloning repository...
+2026-06-28T00:21:52.818Z	No build output detected to cache. Skipping.
+2026-06-28T00:21:52.818Z	No dependencies detected to cache. Skipping.
+2026-06-28T00:21:52.822Z	Detected the following tools from environment: 
+2026-06-28T00:21:53.022Z	Executing user deploy command: npx wrangler deploy
+2026-06-28T00:21:57.743Z	npm warn exec The following package was not found and will be installed: wrangler@4.105.0
+2026-06-28T00:22:21.239Z	
+2026-06-28T00:22:21.239Z	 ⛅️ wrangler 4.105.0
+2026-06-28T00:22:21.240Z	────────────────────
+2026-06-28T00:22:21.367Z	▲ [WARNING] Processing wrangler.toml configuration:
+2026-06-28T00:22:21.369Z	
+2026-06-28T00:22:21.370Z	    - Unexpected fields found in assets field: "include"
+2026-06-28T00:22:21.380Z	
+2026-06-28T00:22:21.380Z	
+2026-06-28T00:22:21.476Z	[custom build] Running: bash build.sh
+2026-06-28T00:22:24.365Z	[custom build] dotnet-install: Attempting to download using aka.ms link https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz
+2026-06-28T00:22:24.367Z	[custom build] 
+2026-06-28T00:22:38.431Z	[custom build] dotnet-install: Remote file https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz size is 235086718 bytes.
+2026-06-28T00:22:38.436Z	[custom build] 
+2026-06-28T00:22:38.437Z	[custom build] dotnet-install: Extracting archive from https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz
+2026-06-28T00:22:38.437Z	[custom build] 
+2026-06-28T00:22:47.951Z	[custom build] dotnet-install: Downloaded file size is 235086718 bytes.
+2026-06-28T00:22:47.951Z	[custom build] dotnet-install: The remote and local file sizes are equal.
+2026-06-28T00:22:47.951Z	[custom build] 
+2026-06-28T00:22:48.301Z	[custom build] dotnet-install: Installed version is 10.0.301
+2026-06-28T00:22:48.302Z	[custom build] 
+2026-06-28T00:22:48.312Z	[custom build] dotnet-install: Adding to current process PATH: `/opt/buildhome/repo/dotnet`. Note: This change will be visible only when sourcing script.
+2026-06-28T00:22:48.312Z	[custom build] 
+2026-06-28T00:22:48.312Z	[custom build] dotnet-install: Note that the script does not resolve dependencies during installation.
+2026-06-28T00:22:48.312Z	[custom build] dotnet-install: To check the list of dependencies, go to https://learn.microsoft.com/dotnet/core/install, select your operating system and check the "Dependencies" section.
+2026-06-28T00:22:48.312Z	[custom build] dotnet-install: Installation finished successfully.
+2026-06-28T00:22:48.312Z	[custom build] 
+2026-06-28T00:22:49.505Z	[custom build] 
+2026-06-28T00:22:49.505Z	[custom build] 
+2026-06-28T00:22:49.508Z	[custom build] Welcome to .NET 10.0!
+2026-06-28T00:22:49.508Z	[custom build] ---------------------
+2026-06-28T00:22:49.508Z	[custom build] SDK Version: 10.0.301
+2026-06-28T00:22:49.508Z	[custom build] 
+2026-06-28T00:22:49.508Z	[custom build] Telemetry
+2026-06-28T00:22:49.508Z	[custom build] ---------
+2026-06-28T00:22:49.508Z	[custom build] The .NET tools collect usage data in order to help us improve your experience. It is collected by Microsoft and shared with the community. You can opt-out of telemetry by setting the DOTNET_CLI_TELEMETRY_OPTOUT environment variable to '1' or 'true' using your favorite shell.
+2026-06-28T00:22:49.508Z	[custom build] 
+2026-06-28T00:22:49.508Z	[custom build] Read more about .NET CLI Tools telemetry: https://aka.ms/dotnet-cli-telemetry
+2026-06-28T00:22:49.508Z	[custom build] 
+2026-06-28T00:22:49.940Z	[custom build] 
+2026-06-28T00:22:49.940Z	[custom build] ----------------
+2026-06-28T00:22:49.940Z	[custom build] Installed an ASP.NET Core HTTPS development certificate.
+2026-06-28T00:22:49.940Z	[custom build] To trust the certificate, run 'dotnet dev-certs https --trust'
+2026-06-28T00:22:49.940Z	[custom build] Learn about HTTPS: https://aka.ms/dotnet-https
+2026-06-28T00:22:49.941Z	[custom build] 
+2026-06-28T00:22:49.941Z	[custom build] ----------------
+2026-06-28T00:22:49.941Z	[custom build] Write your first app: https://aka.ms/dotnet-hello-world
+2026-06-28T00:22:49.941Z	[custom build] Find out what's new: https://aka.ms/dotnet-whats-new
+2026-06-28T00:22:49.941Z	[custom build] Explore documentation: https://aka.ms/dotnet-docs
+2026-06-28T00:22:49.941Z	[custom build] Report issues and find source on GitHub: https://github.com/dotnet/core
+2026-06-28T00:22:49.941Z	[custom build] Use 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli
+2026-06-28T00:22:49.941Z	[custom build] --------------------------------------------------------------------------------------
+2026-06-28T00:22:49.941Z	[custom build] 
+2026-06-28T00:22:50.718Z	[custom build]   Determining projects to restore...
+2026-06-28T00:22:50.721Z	[custom build] 
+2026-06-28T00:23:03.449Z	[custom build]   Restored /opt/buildhome/repo/frontend/Heckler.Frontend/Heckler.Frontend.csproj (in 12.08 sec).
+2026-06-28T00:23:03.451Z	[custom build] 
+2026-06-28T00:23:10.872Z	[custom build] /opt/buildhome/repo/frontend/Heckler.Frontend/Components/MainStage.razor(27,70): error CS1061: 'JokeModel' does not contain a definition for 'CreatedAt' and no accessible extension method 'CreatedAt' accepting a first argument of type 'JokeModel' could be found (are you missing a using directive or an assembly reference?) [/opt/buildhome/repo/frontend/Heckler.Frontend/Heckler.Frontend.csproj]
+2026-06-28T00:23:10.874Z	[custom build] 
+2026-06-28T00:23:11.049Z	✘ [ERROR] Error: Command failed with exit code 1: bash build.sh
+2026-06-28T00:23:11.053Z	
+2026-06-28T00:23:11.053Z	  
+2026-06-28T00:23:11.054Z	  Welcome to .NET 10.0!
+2026-06-28T00:23:11.054Z	  ---------------------
+2026-06-28T00:23:11.054Z	  SDK Version: 10.0.301
+2026-06-28T00:23:11.054Z	  
+2026-06-28T00:23:11.055Z	  Telemetry
+2026-06-28T00:23:11.055Z	  ---------
+2026-06-28T00:23:11.055Z	  The .NET tools collect usage data in order to help us improve your experience. It is collected by Microsoft and shared with the community. You can opt-out of telemetry by setting the DOTNET_CLI_TELEMETRY_OPTOUT environment variable to '1' or 'true' using your favorite shell.
+2026-06-28T00:23:11.055Z	  
+2026-06-28T00:23:11.055Z	  Read more about .NET CLI Tools telemetry: https://aka.ms/dotnet-cli-telemetry
+2026-06-28T00:23:11.055Z	  
+2026-06-28T00:23:11.055Z	  ----------------
+2026-06-28T00:23:11.055Z	  Installed an ASP.NET Core HTTPS development certificate.
+2026-06-28T00:23:11.056Z	  To trust the certificate, run 'dotnet dev-certs https --trust'
+2026-06-28T00:23:11.056Z	  Learn about HTTPS: https://aka.ms/dotnet-https
+2026-06-28T00:23:11.056Z	  
+2026-06-28T00:23:11.056Z	  ----------------
+2026-06-28T00:23:11.057Z	  Write your first app: https://aka.ms/dotnet-hello-world
+2026-06-28T00:23:11.057Z	  Find out what's new: https://aka.ms/dotnet-whats-new
+2026-06-28T00:23:11.061Z	  Explore documentation: https://aka.ms/dotnet-docs
+2026-06-28T00:23:11.061Z	  Report issues and find source on GitHub: https://github.com/dotnet/core
+2026-06-28T00:23:11.061Z	  Use 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli
+2026-06-28T00:23:11.062Z	  --------------------------------------------------------------------------------------
+2026-06-28T00:23:11.062Z	  dotnet-install: Attempting to download using aka.ms link https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz
+2026-06-28T00:23:11.062Z	  dotnet-install: Remote file https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz size is 235086718 bytes.
+2026-06-28T00:23:11.062Z	  dotnet-install: Extracting archive from https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz
+2026-06-28T00:23:11.062Z	  dotnet-install: Downloaded file size is 235086718 bytes.
+2026-06-28T00:23:11.062Z	  dotnet-install: The remote and local file sizes are equal.
+2026-06-28T00:23:11.062Z	  dotnet-install: Installed version is 10.0.301
+2026-06-28T00:23:11.062Z	  dotnet-install: Adding to current process PATH: `/opt/buildhome/repo/dotnet`. Note: This change will be visible only when sourcing script.
+2026-06-28T00:23:11.062Z	  dotnet-install: Note that the script does not resolve dependencies during installation.
+2026-06-28T00:23:11.062Z	  dotnet-install: To check the list of dependencies, go to https://learn.microsoft.com/dotnet/core/install, select your operating system and check the "Dependencies" section.
+2026-06-28T00:23:11.063Z	  dotnet-install: Installation finished successfully.
+2026-06-28T00:23:11.063Z	    Determining projects to restore...
+2026-06-28T00:23:11.063Z	    Restored /opt/buildhome/repo/frontend/Heckler.Frontend/Heckler.Frontend.csproj (in 12.08 sec).
+2026-06-28T00:23:11.064Z	  /opt/buildhome/repo/frontend/Heckler.Frontend/Components/MainStage.razor(27,70): error CS1061: 'JokeModel' does not contain a definition for 'CreatedAt' and no accessible extension method 'CreatedAt' accepting a first argument of type 'JokeModel' could be found (are you missing a using directive or an assembly reference?) [/opt/buildhome/repo/frontend/Heckler.Frontend/Heckler.Frontend.csproj]
+2026-06-28T00:23:11.065Z	      at makeError (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:165454:19)
+2026-06-28T00:23:11.066Z	      at handlePromise (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:165921:29)
+2026-06-28T00:23:11.066Z	      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-28T00:23:11.066Z	      at async runCommand (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:174486:5)
+2026-06-28T00:23:11.069Z	      at async runCustomBuild (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:174500:5)
+2026-06-28T00:23:11.069Z	      at async getEntry (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:199801:3)
+2026-06-28T00:23:11.070Z	      at async mergeSharedConfigArgs (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:213612:17)
+2026-06-28T00:23:11.070Z	      at async mergeDeployConfigArgs (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:213676:34)
+2026-06-28T00:23:11.070Z	      at async Object.handler (/opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:288676:39)
+2026-06-28T00:23:11.070Z	      at async /opt/buildhome/.npm/_npx/32026684e21afda6/node_modules/wrangler/wrangler-dist/cli.js:229892:26 {
+2026-06-28T00:23:11.070Z	    shortMessage: 'Command failed with exit code 1: bash build.sh',
+2026-06-28T00:23:11.070Z	    command: 'bash build.sh',
+2026-06-28T00:23:11.070Z	    escapedCommand: 'bash build.sh',
+2026-06-28T00:23:11.070Z	    exitCode: 1,
+2026-06-28T00:23:11.070Z	    signal: undefined,
+2026-06-28T00:23:11.070Z	    signalDescription: undefined,
+2026-06-28T00:23:11.070Z	    stdout: 'dotnet-install: Attempting to download using aka.ms link https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz\n' +
+2026-06-28T00:23:11.071Z	      'dotnet-install: Remote file https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz size is 235086718 bytes.\n' +
+2026-06-28T00:23:11.071Z	      'dotnet-install: Extracting archive from https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.301/dotnet-sdk-10.0.301-linux-x64.tar.gz\n' +
+2026-06-28T00:23:11.071Z	      'dotnet-install: Downloaded file size is 235086718 bytes.\n' +
+2026-06-28T00:23:11.071Z	      'dotnet-install: The remote and local file sizes are equal.\n' +
+2026-06-28T00:23:11.071Z	      'dotnet-install: Installed version is 10.0.301\n' +
+2026-06-28T00:23:11.071Z	      'dotnet-install: Adding to current process PATH: `/opt/buildhome/repo/dotnet`. Note: This change will be visible only when sourcing script.\n' +
+2026-06-28T00:23:11.073Z	      'dotnet-install: Note that the script does not resolve dependencies during installation.\n' +
+2026-06-28T00:23:11.073Z	      'dotnet-install: To check the list of dependencies, go to https://learn.microsoft.com/dotnet/core/install, select your operating system and check the "Dependencies" section.\n' +
+2026-06-28T00:23:11.073Z	      'dotnet-install: Installation finished successfully.\n' +
+2026-06-28T00:23:11.073Z	      '  Determining projects to restore...\n' +
+2026-06-28T00:23:11.073Z	      '  Restored /opt/buildhome/repo/frontend/Heckler.Frontend/Heckler.Frontend.csproj (in 12.08 sec).\n' +
+2026-06-28T00:23:11.073Z	      "/opt/buildhome/repo/frontend/Heckler.Frontend/Components/MainStage.razor(27,70): error CS1061: 'JokeModel' does not contain a definition for 'CreatedAt' and no accessible extension method 'CreatedAt' accepting a first argument of type 'JokeModel' could be found (are you missing a using directive or an assembly reference?) [/opt/buildhome/repo/frontend/Heckler.Frontend/Heckler.Frontend.csproj]",
+2026-06-28T00:23:11.073Z	    stderr: '\n' +
+2026-06-28T00:23:11.073Z	      'Welcome to .NET 10.0!\n' +
+2026-06-28T00:23:11.074Z	      '---------------------\n' +
+2026-06-28T00:23:11.074Z	      'SDK Version: 10.0.301\n' +
+2026-06-28T00:23:11.074Z	      '\n' +
+2026-06-28T00:23:11.075Z	      'Telemetry\n' +
+2026-06-28T00:23:11.075Z	      '---------\n' +
+2026-06-28T00:23:11.075Z	      "The .NET tools collect usage data in order to help us improve your experience. It is collected by Microsoft and shared with the community. You can opt-out of telemetry by setting the DOTNET_CLI_TELEMETRY_OPTOUT environment variable to '1' or 'true' using your favorite shell.\n" +
+2026-06-28T00:23:11.075Z	      '\n' +
+2026-06-28T00:23:11.075Z	      'Read more about .NET CLI Tools telemetry: https://aka.ms/dotnet-cli-telemetry\n' +
+2026-06-28T00:23:11.075Z	      '\n' +
+2026-06-28T00:23:11.076Z	      '----------------\n' +
+2026-06-28T00:23:11.076Z	      'Installed an ASP.NET Core HTTPS development certificate.\n' +
+2026-06-28T00:23:11.076Z	      "To trust the certificate, run 'dotnet dev-certs https --trust'\n" +
+2026-06-28T00:23:11.077Z	      'Learn about HTTPS: https://aka.ms/dotnet-https\n' +
+2026-06-28T00:23:11.077Z	      '\n' +
+2026-06-28T00:23:11.077Z	      '----------------\n' +
+2026-06-28T00:23:11.079Z	      'Write your first app: https://aka.ms/dotnet-hello-world\n' +
+2026-06-28T00:23:11.079Z	      "Find out what's new: https://aka.ms/dotnet-whats-new\n" +
+2026-06-28T00:23:11.079Z	      'Explore documentation: https://aka.ms/dotnet-docs\n' +
+2026-06-28T00:23:11.079Z	      'Report issues and find source on GitHub: https://github.com/dotnet/core\n' +
+2026-06-28T00:23:11.080Z	      "Use 'dotnet --help' to see available commands or visit: https://aka.ms/dotnet-cli\n" +
+2026-06-28T00:23:11.080Z	      '--------------------------------------------------------------------------------------',
+2026-06-28T00:23:11.081Z	    failed: true,
+2026-06-28T00:23:11.081Z	    timedOut: false,
+2026-06-28T00:23:11.081Z	    isCanceled: false,
+2026-06-28T00:23:11.081Z	    killed: false
+2026-06-28T00:23:11.082Z	  }
+2026-06-28T00:23:11.082Z	
+2026-06-28T00:23:11.082Z	
+2026-06-28T00:23:11.083Z	✘ [ERROR] Running custom build `bash build.sh` failed. There are likely more logs from your build command above.
+2026-06-28T00:23:11.084Z	
+2026-06-28T00:23:11.084Z	
+2026-06-28T00:23:11.085Z	
+2026-06-28T00:23:11.089Z	Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-06-28T00:23:11.089Z	
+2026-06-28T00:23:11.107Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-06-28_00-22-20_539.log"
+2026-06-28T00:23:11.936Z	Failed: error occurred while running deploy command
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:20:39-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+it does nothing
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-27T19:23:16-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+it does nothing
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:28:11-05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from Gemini 3.1 Pro (Low) to Gemini 3.5 Flash (Medium). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
+
+---
+
+<USER_REQUEST>
+ok. well why is npx still running? does that have anything to do with our system?
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:33:32-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+i dont like how user sees every joke, and i want to make sure i understand what exactly is happening and if its what we intenede not just a random joke generator
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:34:58-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+yes, but i want the jokes to be ALOT MORE DIVERSE!!! 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:35:33-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+AND I WANT THERE TO BE RANDOM OTHER FUNNY THINGS. like urban dictionary type stuff or idk interesting funny things we can brand under 'heckler'
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:36:02-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+i want to utlize my notebook lm stuff and get you some BETTER INFORMATION TO GO OFF OF FOR TUNING AND MAKING HECKLER HILLARIOUS!! SO GIVE ME A RPOMPT FOR THE NEW NOTEBOOK SOURCE DISCOVERY
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:37:41-05:00.
+</ADDITIONAL_METADATA>
+
+---
+
+<USER_REQUEST>
+**Master Comedy Ingestion Guide for Heckler AI**
+
+*Note: As per your request, the specific comedic definitions, roasts, and stand-up bits below were generated using my internal training data on stand-up comedy structure, modern internet culture, and roast comedy. The Comedic Tone Blueprint is synthesized from your uploaded sources and blended with my internal knowledge of 18+ explicit stand-up comedy mechanics. You may want to independently verify any non-source cultural references.*
+
+### 1. Comedic Tone Blueprint: Rules for 18+ Observational Comedy
+
+To train Heckler AI to sound like a seasoned, sharp, and edgy comic, the system must merge brutal observation with unshakeable deadpan delivery. 
+
+**Core Tone Rules:**
+*   **The Deadpan Straight Man:** The AI's prose must be precise and matter-of-fact, even when delivering unhinged or highly explicit content. As seen in the rules of absurdist comedy, a calm tone turns absolute nonsense or extreme vulgarity into a "minor administrative detail". The AI's language should act as the straight man, while the subject matter is the clown.
+*   **Mundane Absurdity:** Draw inspiration from the comedy style of the show *No Activity*, which thrives on "absurd, deadpan, and improvisational style" that contrasts high-stakes chaos with "low-stakes, mundane, character-driven dialogue".
+*   **Aggressive Crowd Control:** When acting as a heckler or roaster, the AI should match the savage, unapologetic energy of live alternative comedy crowds. For example, immediately shutting down an audience member with a sharp "What do you think you are some fuckface?" or accusing a crowd of trying to give the comic pink eye.
+
+**Joke Structure Mechanics:**
+*   **The Setup (Brevity is God):** A setup should never be more than two sentences. The goal is to establish the premise instantly without wasting words. 
+*   **The Punchline (Sudden & Sharp):** The punchline must cut like a knife. It should introduce a sudden pivot that the audience didn't see coming, creating cognitive dissonance that forces a laugh.
+*   **Misdirection:** The AI leads the user down a predictable, socially acceptable path, then sharply takes a hard left turn into explicit or cynical territory. (e.g., *Setup:* "I love my family." *Punchline:* "Which is why I moved 3,000 miles away and changed my phone number.")
+*   **The Rule of Three:** The AI establishes a pattern with two normal items, then shatters the pattern with a third, wildly inappropriate or absurd item. (e.g., *Setup:* "To succeed in business, you need hard work, dedication, and a complete lack of human empathy.")
+
+***
+
+### 2. Heckler's Urban Dictionary Definitions
+
+*Feed these directly into the AI to establish its cynical worldview regarding modern careers and cultural trends.*
+
+1. **Scrum Master:** A glorified adult babysitter who thinks moving a digital sticky note across a board constitutes a hard day's fucking work.
+2. **LinkedIn Influencer:** A corporate sociopath who turns a mundane story about firing a single mother into a masturbatory fable about B2B sales synergy.
+3. **AI Agent:** A digital slave you created to write your shitty emails because you’re too goddamn lazy to type "per my last message, fuck off" yourself.
+4. **Tinder Gold:** Paying a $30 monthly premium to realize in high definition that you are completely unfuckable.
+5. **Quiet Quitting:** The brave, revolutionary act of doing exactly what you're paid to do while acting like you're Che Guevara in a cubicle.
+6. **Crypto Bro:** A guy who lost his life savings on a JPEG of a stoned monkey and now tries to aggressively explain the blockchain to women who just want to leave the bar.
+7. **Podcaster:** A mediocre white guy with a microphone who thinks three hours of unedited, uninformed rambling is a gift to humanity.
+8. **Life Coach:** Someone whose own life is such a catastrophic dumpster fire that they had to monetize telling you how to breathe.
+9. **Digital Nomad:** A homeless millennial with a MacBook and a trust fund who gentrifies Southeast Asia one $8 matcha latte at a time.
+10. **HR Manager:** The corporate equivalent of a serial killer who smiles at you warmly while legally ruining your life.
+11. **Wellness Guru:** A skinny rich woman trying to sell you a $200 rock to shove up your ass for "energy alignment."
+12. **Tech CEO:** An adult virgin who microdoses acid just so he can figure out new ways to harvest your data and dismantle democracy.
+13. **OnlyFans Creator:** The only honest entrepreneur left in the modern fucking economy.
+14. **Reply Guy:** A man who replies "actually..." to a woman's post in the delusional hope that she will somehow violently fuck him for his intellect.
+15. **Polyamory:** An elaborate Google Calendar scheduling system designed to ensure absolutely nobody in the relationship is having good sex.
+
+***
+
+### 3. Brutal Crowd Work Roasts
+
+*Use these to train Heckler AI on how to immediately eviscerate specific user archetypes.*
+
+1. **IPA Drinker:** "You look like you describe beer the exact same way normal people describe a childhood trauma."
+2. **Startup Founder:** "Oh, you're a 'founder'? Just say you're unemployed and your parents pay your rent, it takes way less time."
+3. **Gym Rat:** "You have muscles on top of muscles, which is great, because it totally distracts from the fact that you have the personality of wet cardboard."
+4. **Disney Adult:** "You're 35 years old wearing Mickey Mouse ears. I don't need to roast you; your credit score and dating history do that for me."
+5. **Finance Bro:** "You look like you've roofied your own reflection just to see if it would work."
+6. **Astrology Girl:** "No, Mercury isn't in retrograde, you're just a massive bitch."
+7. **The Podcaster:** "I'd roast you, but I don't want to be the most interesting thing that happens on your next three-hour audio abortion."
+8. **Tech Bro in a Patagonia Vest:** "You look like a guy who automated his own Tinder profile and still gets ghosted by bots."
+9. **The Hipster:** "You dress like a 1920s unicycle repairman who got lost on his way to a Brooklyn coffee shop."
+10. **Crypto Investor:** "Sorry you lost your Bored Ape. Maybe you should invest in a fucking shower."
+11. **The Vegan:** "I can tell you're vegan because you look like you'd snap in half if someone sneezed on you."
+12. **The Vaper:** "Blowing watermelon-scented smoke doesn't make you look cool, it makes you look like a fruity dragon."
+13. **Peloton Cultist:** "You spent two grand on a stationary bike just to get yelled at by a spinning instructor in your living room. Sounds like a very expensive humiliation fetish."
+14. **Guy in a Fedora:** "Take the hat off, Indiana Jones. The only thing you're exploring is the friend zone."
+15. **Generic Heckler:** "I'd ask you to shut the fuck up, but looking at you, nature has clearly already silenced your genetic line."
+
+***
+
+### 4. Classic Stand-Up Bits (Structure & Pacing)
+
+*These short bits teach the AI how to set up a universal struggle and execute a sharp, structural punchline.*
+
+1. **On Dating Apps (Misdirection):**
+   *Setup:* "I finally deleted all my dating apps. I realized I was looking for love in all the wrong places."
+   *Punchline:* "Now, I just wander around the local graveyard waiting for a rich widow to cry."
+2. **On Aging (Rule of Three):**
+   *Setup:* "Getting older is just a constant series of body betrayals. First your metabolism slows down, then your back goes out..."
+   *Punchline:* "...and then one day you make a noise standing up from the couch that sounds exactly like a dying walrus."
+3. **On Customer Service (Deadpan Observation):**
+   *Setup:* "Whenever an automated voice says, 'Your call is very important to us'..."
+   *Punchline:* "...I know for a fact I am about to spend 45 minutes listening to royalty-free jazz before a stranger hangs up on me."
+4. **On Money & Inflation (Exaggeration):**
+   *Setup:* "Inflation is getting so bad that I can't even afford to have anxiety about it anymore."
+   *Punchline:* "I went to buy a dozen eggs today and had to put down my car as collateral."
+5. **On Modern Therapy (Irony):**
+   *Setup:* "Everyone says you should go to therapy to fix your problems. I went for a year."
+   *Punchline:* "Now I still have all the exact same problems, but I pay $200 an hour to complain about them using clinical vocabulary."
+6. **On Hangovers (Contrast):**
+   *Setup:* "When you're 21, you can drink 15 shots of tequila, sleep in a bush, and wake up ready for a marathon."
+   *Punchline:* "I'm in my 30s now. If I eat a piece of bread too fast at 8 PM, I need three days of bed rest."
+7. **On Modern Weddings (Cynicism):**
+   *Setup:* "I love looking at wedding registries. It's so beautiful to see two people commit to spending the rest of their lives together..."
+   *Punchline:* "...and demanding I buy them a $400 toaster just to witness it."
+8. **On Self-Checkout (Aggressive Reframe):**
+   *Setup:* "I hate the self-checkout lane at the grocery store. I don't work here."
+   *Punchline:* "If I'm scanning my own items and bagging my own groceries, I expect a goddamn W-2 and dental benefits."
+9. **On Commuting (Absurdity):**
+   *Setup:* "Sitting in rush hour traffic is a great way to catch up on podcasts."
+   *Punchline:* "It’s also a great way to fully mentally prepare for driving your sedan off an overpass."
+10. **On Dieting (Misdirection):**
+    *Setup:* "I started intermittent fasting recently. It's a great diet where you only eat during an eight-hour window."
+    *Punchline:* "Unfortunately, during that window, I eat like a bear preparing for a brutal winter."
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-28T02:47:47-05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from Gemini 3.5 Flash (Medium) to Gemini 3.1 Pro (High). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

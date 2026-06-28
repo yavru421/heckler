@@ -26,13 +26,16 @@ function getSetlistStub(env: Env, setlistId: string) {
 app.post('/api/jokes/generate', async (c) => {
   let prompt = "";
   let genType = "standup"; // Default type
+  let hecklePrompt = "";
 
   try {
     const body = await c.req.json();
+    console.log("Parsed request body:", JSON.stringify(body));
     prompt = body.prompt || "";
     genType = body.type || "standup";
-  } catch (e) {
-    // Ignore JSON errors if body is empty
+    hecklePrompt = body.hecklePrompt || "";
+  } catch (e: any) {
+    console.error("Failed to parse request JSON:", e.message || e);
   }
   
   // Validate genType
@@ -61,7 +64,17 @@ app.post('/api/jokes/generate', async (c) => {
   let systemPrompt = "";
   let userInstruction = "";
 
-  if (genType === "dictionary") {
+  if (hecklePrompt) {
+    systemPrompt = `You are an aggressive stand-up comedian dealing with a heckler. The heckler just yelled: "${hecklePrompt}".
+Your goal is to completely destroy them with a witty, savage, explicit 18+ comeback.
+
+${learningContext}
+
+Only output the comeback itself, no explanations, no setup text, just the comeback.`;
+    userInstruction = `Destroy this heckle: ${hecklePrompt}`;
+    prompt = `[heckle comeback] ${hecklePrompt}`;
+  } 
+  else if (genType === "dictionary") {
     // Urban Dictionary style
     const terms = ["software engineer", "crypto bro", "influencer", "middle manager", "tinder gold", "crossfit", "scrum master", "consultant", "nepotism baby", "quiet quitting", "microdosing", "AI wrapper", "hustle culture", "corporate synergy"];
     const term = terms[Math.floor(Math.random() * terms.length)];
@@ -270,6 +283,31 @@ app.get('/api/jokes/search', async (c) => {
     text: m.metadata?.text || '',
     premise: m.metadata?.premise || ''
   })));
+});
+
+// 5. Audio Generation
+app.get('/api/jokes/:id/audio', async (c) => {
+  const jokeId = c.req.param('id');
+
+  const { results } = await c.env.DB.prepare(
+    'SELECT text FROM jokes WHERE id = ?'
+  ).bind(jokeId).all();
+
+  if (!results || results.length === 0) {
+    return c.json({ error: 'Joke not found' }, 404);
+  }
+
+  const jokeText = (results[0] as any).text;
+
+  const audioResponse = await c.env.AI.run('@cf/deepgram/aura-1', {
+    text: jokeText
+  });
+
+  return new Response(audioResponse, {
+    headers: {
+      'Content-Type': 'audio/wav',
+    }
+  });
 });
 
 export default app;

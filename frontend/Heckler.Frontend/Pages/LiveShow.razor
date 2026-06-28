@@ -1,0 +1,88 @@
+@page "/live"
+@using Heckler.Frontend.Models
+@using Heckler.Frontend.Services
+@inject JokeService JokeService
+@inject IJSRuntime JSRuntime
+
+<div class="heckler-app">
+    <header class="app-header glass-panel">
+        <div class="logo">
+            <h1>LIVE<span class="neon-text">SHOW</span></h1>
+            <div class="age-warning">Audio First - Continuous Play</div>
+        </div>
+    </header>
+
+    <main class="app-content stage-container" style="display: flex; flex-direction: column; gap: 2rem; max-width: 600px; margin: 0 auto;">
+        
+        <div class="glass-panel" style="padding: 2rem; text-align: center;">
+            @if (activeJoke != null)
+            {
+                <h3 style="margin-bottom: 1rem;">@activeJoke.Premise</h3>
+                <p style="font-size: 1.2rem; margin-bottom: 1.5rem;">@activeJoke.Text</p>
+                
+                <div style="margin-top: 1.5rem; background: #222; padding: 1rem; border-radius: 8px;">
+                    <audio id="live-audio" src="/api/jokes/@activeJoke.Id/audio" autoplay controls style="width: 100%;"></audio>
+                </div>
+            }
+            else
+            {
+                <p>Waiting for the comedian to take the stage...</p>
+            }
+        </div>
+
+        <div class="glass-panel heckle-box" style="padding: 1.5rem;">
+            <h3>Heckle the Comedian!</h3>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <input type="text" @bind="heckleText" placeholder="Yell something..." class="form-control" style="flex: 1; padding: 0.5rem; border-radius: 4px; border: 1px solid #444; background: #222; color: white;" />
+                <button class="btn-generate" @onclick="Heckle" disabled="@isGenerating" style="padding: 0.5rem 1rem;">
+                    @(isGenerating ? "Heckling..." : "Heckle! 🍅")
+                </button>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+@code {
+    private JokeModel? activeJoke;
+    private string heckleText = "";
+    private bool isGenerating = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNextJoke();
+    }
+
+    private async Task LoadNextJoke()
+    {
+        var jokes = await JokeService.GetActiveJokesAsync();
+        activeJoke = jokes.FirstOrDefault(); 
+        StateHasChanged();
+    }
+
+    private async Task Heckle()
+    {
+        if (string.IsNullOrWhiteSpace(heckleText)) return;
+        
+        isGenerating = true;
+        StateHasChanged();
+
+        var newJoke = await JokeService.GenerateJokeAsync("heckle", heckleText);
+        if (newJoke != null)
+        {
+            activeJoke = newJoke;
+        }
+
+        heckleText = "";
+        isGenerating = false;
+        StateHasChanged();
+        
+        // Give Blazor time to re-render the audio tag with new src
+        await Task.Delay(50);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "var aud = document.getElementById('live-audio'); if (aud) { aud.load(); aud.play().catch(()=>{}); }");
+        }
+        catch {}
+    }
+}
