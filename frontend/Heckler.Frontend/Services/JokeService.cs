@@ -6,10 +6,12 @@ namespace Heckler.Frontend.Services
     public class JokeService
     {
         private readonly HttpClient _http;
+        private readonly string _sessionId;
 
         public JokeService(HttpClient http)
         {
             _http = http;
+            _sessionId = Guid.NewGuid().ToString();
         }
 
         public async Task<List<JokeModel>> GetActiveJokesAsync()
@@ -44,7 +46,7 @@ namespace Heckler.Frontend.Services
         {
             try
             {
-                var response = await _http.PostAsJsonAsync("api/jokes/generate", new { type, hecklePrompt });
+                var response = await _http.PostAsJsonAsync("api/jokes/generate", new { type, hecklePrompt, sessionId = _sessionId });
                 if (response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadFromJsonAsync<JokeModel>();

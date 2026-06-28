@@ -5,6 +5,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavManager
+@implements IDisposable
 
 <div class="heckler-app">
     <header class="app-header glass-panel">
@@ -37,14 +38,24 @@
         else
         {
             <div class="glass-panel" style="padding: 2rem; text-align: center;">
-                @if (activeJoke != null)
+                @if (!showStarted)
+                {
+                    <div style="padding: 3rem 0;">
+                        <h2 style="margin-bottom: 1rem;">Ready for the show?</h2>
+                        <p style="color: #888; margin-bottom: 2rem;">We use your microphone to detect laughter and dynamically grade the comedian.</p>
+                        <button class="btn-generate" @onclick="StartShow" style="padding: 1rem 2rem; font-size: 1.2rem;">Start Show (Enable Mic)</button>
+                    </div>
+                }
+                else if (activeJoke != null)
                 {
                     <h3 style="margin-bottom: 1rem; color: #ff2a5f;">@activeJoke.Premise</h3>
                     <p style="font-size: 1.3rem; margin-bottom: 1.5rem; line-height: 1.5;">@activeJoke.Text</p>
-                    
-                    <div style="margin-top: 1.5rem; background: #111; padding: 1rem; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-                        <audio id="live-audio" src="@($"{Http.BaseAddress}api/jokes/{activeJoke.Id}/audio")" autoplay controls @onended="AudioEnded" style="width: 100%;"></audio>
-                    </div>
+                    @if (isListeningForLaughter)
+                    {
+                        <div style="margin-top: 1rem; color: var(--neon-green); font-size: 0.9rem; animation: pulse 1s infinite;">
+                            🎤 Listening for your reaction...
+                        </div>
+                    }
                 }
                 else
                 {
@@ -94,14 +105,59 @@
     private string userComment = "";
     private bool isSubmitting = false;
 
+    private bool showStarted = false;
+    private bool isListeningForLaughter = false;
+    private DotNetObjectReference<LiveShow>? objRef;
+
     protected override async Task OnInitializedAsync()
     {
+        objRef = DotNetObjectReference.Create(this);
+        // Don't start generating immediately, wait for user to click StartShow
+    }
+    
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+    
+    [JSInvokable]
+    public async Task AudioEndedCallback()
+    {
+        await AudioEnded();
+    }
+    
+    private async Task PlayJokeAudio()
+    {
+        if (activeJoke != null && objRef != null)
+        {
+            try {
+                await JSRuntime.InvokeVoidAsync("window.speakJoke", activeJoke.Text, objRef);
+            } catch {
+                await AudioEnded();
+            }
+        }
+    }
+
+    private async Task StartShow()
+    {
+        try {
+            await JSRuntime.InvokeVoidAsync("window.initTTS");
+        } catch { }
+
+        showStarted = true;
+        StateHasChanged();
+        
+        try {
+            _ = JSRuntime.InvokeAsync<bool>("window.audioSentiment.startListening");
+        } catch { }
+
         await EnsureQueue();
         if (playQueue.Any())
         {
             activeJoke = playQueue.First();
             playQueue.RemoveAt(0);
             StateHasChanged();
+            _ = PlayJokeAudio();
             _ = EnsureQueue();
         }
     }
@@ -144,6 +200,26 @@
 
     private async Task AudioEnded()
     {
+        if (activeJoke != null)
+        {
+            var jokeToRate = activeJoke.Id;
+            isListeningForLaughter = true;
+            StateHasChanged();
+
+            bool laughed = false;
+            try {
+                laughed = await JSRuntime.InvokeAsync<bool>("window.audioSentiment.measureLaughter", 4000);
+            } catch {
+                await Task.Delay(4000); // Fallback wait
+            }
+            
+            isListeningForLaughter = false;
+            StateHasChanged();
+
+            // Auto-rate the joke based on microphone volume
+            _ = JokeService.RateJokeAsync(jokeToRate, laughed ? "kill" : "bomb");
+        }
+
         jokesPlayed++;
         if (jokesPlayed >= 5)
         {
@@ -166,12 +242,7 @@
             playQueue.RemoveAt(0);
             StateHasChanged();
             
-            await Task.Delay(50); // DOM yield
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("eval", "var aud = document.getElementById('live-audio'); if (aud) { aud.load(); aud.play().catch(()=>{}); }");
-            }
-            catch {}
+            _ = PlayJokeAudio();
             
             _ = EnsureQueue();
         }
