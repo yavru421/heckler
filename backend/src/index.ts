@@ -223,7 +223,8 @@ Only output the joke itself, no explanations, no setup text, just the joke text.
       }
 
       // Pull a random joke from the DB of the requested type that hasn't been played
-      const query = `SELECT id, text, premise FROM jokes WHERE premise LIKE ? ${filterClause} ORDER BY RANDOM() LIMIT 1`;
+      // Include legacy jokes that don't have a bracket prefix.
+      const query = `SELECT id, text, premise FROM jokes WHERE (premise LIKE ? OR premise NOT LIKE '[%') ${filterClause} ORDER BY RANDOM() LIMIT 1`;
       
       // Bind parameters: first the premise type, then the spread of playedIds
       const { results: vaultJokes } = await c.env.DB.prepare(query).bind(`[${genType}]%`, ...playedIds).all();
