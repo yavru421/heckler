@@ -12,6 +12,9 @@ chmod +x dotnet-install.sh
 # Install .NET SDK 10.0 locally
 ./dotnet-install.sh -c 10.0 -InstallDir ./dotnet
 
+# Ensure the dotnet binary is executable (Cloudflare CI strips execute bits)
+chmod +x ./dotnet/dotnet
+
 # Clean old output and local build artifacts to force a complete recompilation
 rm -rf output
 rm -rf frontend/Heckler.Frontend/bin
