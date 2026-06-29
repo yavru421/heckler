@@ -205,29 +205,46 @@ Only output the joke itself, no explanations, no setup text, just the joke text.
     prompt = `[standup] ${category}`;
   }
 
-  // Feature: Joke Vault Recycling (Save computation time)
-  if (!hecklePrompt && genType === "standup" && Math.random() < 0.8) {
+  // Feature: Dynamic Assembly (Always pull from Joke Vault unless heckled)
+  if (!hecklePrompt) {
     try {
-      // Pull a proven killer joke from the DB
-      const { results: recycled } = await c.env.DB.prepare(
-        'SELECT id, text, premise FROM jokes WHERE (kills - bombs) > 0 AND premise LIKE ? ORDER BY RANDOM() LIMIT 1'
-      ).bind(`[standup]%`).all();
+      // Get played jokes from the active setlist DO to prevent repetition
+      const stub = getSetlistStub(c.env, 'global-setlist');
+      const doResponse = await stub.fetch('http://do/jokes');
+      const activeJokes = await doResponse.json() as any[];
+      
+      // We only want to filter out jokes that have actually been played in this session.
+      // For now, we assume the DO 'activeJokes' represents the played setlist.
+      const playedIds = activeJokes.map(j => j.id);
+      let filterClause = '';
+      if (playedIds.length > 0) {
+        const placeholders = playedIds.map(() => '?').join(',');
+        filterClause = `AND id NOT IN (${placeholders})`;
+      }
 
-      if (recycled && recycled.length > 0) {
-        const joke = recycled[0] as any;
+      // Pull a random joke from the DB of the requested type that hasn't been played
+      const query = `SELECT id, text, premise FROM jokes WHERE premise LIKE ? ${filterClause} ORDER BY RANDOM() LIMIT 1`;
+      
+      // Bind parameters: first the premise type, then the spread of playedIds
+      const { results: vaultJokes } = await c.env.DB.prepare(query).bind(`[${genType}]%`, ...playedIds).all();
+
+      if (vaultJokes && vaultJokes.length > 0) {
+        const joke = vaultJokes[0] as any;
         
-        // Add to active setlist DO
-        const stub = getSetlistStub(c.env, 'global-setlist');
+        // Add to active setlist DO so it isn't repeated next time
         await stub.fetch(new Request('http://do/add', {
           method: 'POST',
           body: JSON.stringify({ jokeId: joke.id })
         }));
 
-        console.log("Recycled joke:", joke.id);
+        console.log("Pulled from Vault:", joke.id);
         return c.json({ id: joke.id, text: joke.text, premise: joke.premise });
+      } else {
+         // If vault is empty for this type, we'll fall through and generate a new one via Groq
+         console.warn(`Joke vault empty for type ${genType}, falling back to generation.`);
       }
     } catch(e) {
-      console.error("Recycling failed", e);
+      console.error("Vault retrieval failed", e);
     }
   }
 

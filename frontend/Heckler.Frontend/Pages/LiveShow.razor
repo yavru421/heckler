@@ -131,7 +131,7 @@
         if (activeJoke != null && objRef != null)
         {
             try {
-                await JSRuntime.InvokeVoidAsync("window.speakJoke", activeJoke.Text, objRef);
+                await JSRuntime.InvokeVoidAsync("window.speakJoke", activeJoke.Id, objRef);
             } catch {
                 await AudioEnded();
             }
@@ -173,6 +173,9 @@
             if (newJoke != null)
             {
                 playQueue.Add(newJoke);
+                try {
+                    _ = JSRuntime.InvokeVoidAsync("window.prefetchJokeAudio", newJoke.Id);
+                } catch { }
             }
             isGenerating = false;
             StateHasChanged();
@@ -191,6 +194,9 @@
         {
             // Insert heckle response immediately at the front of the queue
             playQueue.Insert(0, newJoke);
+            try {
+                _ = JSRuntime.InvokeVoidAsync("window.prefetchJokeAudio", newJoke.Id);
+            } catch { }
         }
 
         heckleText = "";
