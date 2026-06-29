@@ -7,76 +7,97 @@
 @inject NavigationManager NavManager
 @implements IDisposable
 
-<div class="heckler-app">
-    <header class="app-header glass-panel">
+<div class="heckler-app" style="--audio-scale: calc(1 + var(--audio-level, 0));">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
         <div class="logo">
-            <h1>LIVE<span class="neon-text">SHOW</span></h1>
-            <div class="age-warning">Audio First - Continuous Play</div>
+            <h1>LIVE<span class="neon-text" style="color: var(--neon-red);">SHOW</span></h1>
+            <div class="age-warning" style="color: var(--neon-green);">Audio First - Continuous Play</div>
         </div>
     </header>
 
-    <main class="app-content stage-container" style="display: flex; flex-direction: column; gap: 2rem; max-width: 600px; margin: 0 auto;">
+    <main class="app-content stage-container" style="display: flex; flex-direction: column; gap: 2rem; max-width: 700px; margin: 0 auto; padding: 0 1rem;">
         
         @if (isShowOver)
         {
-            <div class="glass-panel" style="padding: 2rem; text-align: center;">
-                <h2 style="margin-bottom: 0.5rem;">How was the show?</h2>
+            <div class="glass-panel" style="padding: 3rem; text-align: center; border-color: var(--neon-green);">
+                <h2 style="margin-bottom: 1rem; color: var(--neon-green);">How was the show?</h2>
                 <p style="color: #aaa; margin-bottom: 2rem;">The comedian has left the stage.</p>
-                <div style="margin: 2rem 0; font-size: 3rem; display: flex; justify-content: center; gap: 1rem; cursor: pointer;">
+                <div style="margin: 2rem 0; font-size: 4rem; display: flex; justify-content: center; gap: 1rem; cursor: pointer;">
                     @for (int i = 1; i <= 5; i++)
                     {
                         var starVal = i;
-                        <span @onclick="() => SetRating(starVal)" style="color: @(starRating >= starVal ? "gold" : "#555"); transition: color 0.2s;">★</span>
+                        <span @onclick="() => SetRating(starVal)" style="color: @(starRating >= starVal ? "var(--neon-green)" : "#444"); transition: color 0.3s, transform 0.2s; text-shadow: @(starRating >= starVal ? "0 0 15px var(--neon-green)" : "none");" class="star-rating">★</span>
                     }
                 </div>
-                <textarea @bind="userComment" placeholder="Leave a review (optional)..." class="form-control" style="width: 100%; height: 100px; padding: 1rem; border-radius: 8px; border: 1px solid #444; background: #222; color: white; margin-bottom: 1.5rem;"></textarea>
-                <button class="btn-generate" @onclick="SubmitReview" disabled="@isSubmitting" style="width: 100%; padding: 1rem; font-size: 1.2rem;">
+                <textarea @bind="userComment" placeholder="Leave a review (optional)..." class="form-control" style="width: 100%; height: 120px; padding: 1rem; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.5); color: white; margin-bottom: 1.5rem; font-family: 'Inter', sans-serif;"></textarea>
+                <button class="btn-generate haptic-btn" @onclick="SubmitReview" disabled="@isSubmitting" style="width: 100%; padding: 1.5rem; font-size: 1.2rem; background: var(--neon-green); color: black; border: none; font-weight: bold; text-transform: uppercase;">
                     @(isSubmitting ? "Submitting..." : "Submit Review")
                 </button>
             </div>
         }
         else
         {
-            <div class="glass-panel" style="padding: 2rem; text-align: center;">
+            <div class="glass-panel main-stage" style="padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden;">
+                <!-- Audio Visualizer Spotlight -->
+                <div class="spotlight" style="transform: scale(var(--audio-scale));"></div>
+
                 @if (!showStarted)
                 {
-                    <div style="padding: 3rem 0;">
-                        <h2 style="margin-bottom: 1rem;">Ready for the show?</h2>
-                        <p style="color: #888; margin-bottom: 2rem;">We use your microphone to detect laughter and dynamically grade the comedian.</p>
-                        <button class="btn-generate" @onclick="StartShow" style="padding: 1rem 2rem; font-size: 1.2rem;">Start Show (Enable Mic)</button>
+                    <div style="padding: 3rem 0; position: relative; z-index: 2;">
+                        <h2 style="margin-bottom: 1rem; font-size: 2.5rem;">Ready for the show?</h2>
+                        <p style="color: #888; margin-bottom: 3rem; font-size: 1.1rem;">We use your microphone to detect laughter and dynamically grade the comedian.</p>
+                        <button class="btn-generate haptic-btn" @onclick="StartShow" style="padding: 1.5rem 3rem; font-size: 1.3rem; background: var(--neon-red); color: white; border: none; font-weight: bold; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 42, 95, 0.4);">
+                            START SHOW (Enable Mic)
+                        </button>
                     </div>
                 }
                 else if (activeJoke != null)
                 {
-                    <h3 style="margin-bottom: 1rem; color: #ff2a5f;">@activeJoke.Premise</h3>
-                    <p style="font-size: 1.3rem; margin-bottom: 1.5rem; line-height: 1.5;">@activeJoke.Text</p>
-                    @if (isListeningForLaughter)
-                    {
-                        <div style="margin-top: 1rem; color: var(--neon-green); font-size: 0.9rem; animation: pulse 1s infinite;">
-                            🎤 Listening for your reaction...
-                        </div>
-                    }
+                    <div style="position: relative; z-index: 2;">
+                        <h3 style="margin-bottom: 1.5rem; color: var(--neon-red); font-size: 1.5rem; letter-spacing: 2px;">@activeJoke.Premise</h3>
+                        <p class="fade-in-text" style="font-size: 1.8rem; margin-bottom: 2rem; line-height: 1.4; font-weight: 300;">@activeJoke.Text</p>
+                        
+                        @if (isListeningForLaughter)
+                        {
+                            <div style="margin-top: 2rem; color: var(--neon-green); font-size: 1.1rem; animation: pulse 1s infinite; font-weight: bold;">
+                                🎤 Listening for your reaction...
+                            </div>
+                        }
+                    </div>
                 }
                 else
                 {
-                    <div style="padding: 3rem 0;">
-                        <h3 class="neon-text" style="animation: pulse 1.5s infinite;">The Comedian is walking to the stage...</h3>
-                        <p style="color: #666; margin-top: 1rem;">(Generating material)</p>
+                    <div style="padding: 4rem 0; position: relative; z-index: 2;">
+                        <div class="mic-icon" style="font-size: 4rem; margin-bottom: 1rem; animation: bounce 2s infinite;">🎙️</div>
+                        <h3 class="neon-text" style="animation: pulse 1.5s infinite; font-size: 2rem;">Mic Check...</h3>
+                        <p style="color: #666; margin-top: 1rem; letter-spacing: 2px; text-transform: uppercase;">(Comedian is walking to the stage)</p>
                     </div>
                 }
             </div>
 
-            <div class="glass-panel heckle-box" style="padding: 1.5rem; opacity: @(activeJoke == null ? "0.5" : "1"); pointer-events: @(activeJoke == null ? "none" : "all");">
-                <h3 style="margin-bottom: 1rem;">Heckle the Comedian!</h3>
-                <div style="display: flex; gap: 0.5rem;">
-                    <input type="text" @bind="heckleText" placeholder="Yell something..." class="form-control" style="flex: 1; padding: 0.75rem; border-radius: 4px; border: 1px solid #444; background: #222; color: white; font-size: 1rem;" />
-                    <button class="btn-generate" @onclick="Heckle" disabled="@isGenerating" style="padding: 0.75rem 1.5rem; white-space: nowrap;">
-                        @(isGenerating ? "Heckling..." : "Heckle! 🍅")
+            <div class="glass-panel heckle-box" style="padding: 2rem; opacity: @(activeJoke == null ? "0.5" : "1"); pointer-events: @(activeJoke == null ? "none" : "all"); border-color: @(isGenerating ? "var(--neon-red)" : "var(--surface-border)"); transition: border-color 0.3s;">
+                <h3 style="margin-bottom: 1.5rem; color: #fff;">Heckle the Comedian!</h3>
+                <div style="display: flex; gap: 1rem;">
+                    <input type="text" @bind="heckleText" placeholder="Yell something brutal..." class="form-control heckle-input" style="flex: 1; padding: 1rem; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.6); color: white; font-size: 1.1rem;" />
+                    <button class="btn-generate haptic-btn" @onclick="Heckle" disabled="@isGenerating" style="padding: 1rem 2rem; white-space: nowrap; background: var(--neon-red); color: white; border: none; font-weight: bold; border-radius: 8px;">
+                        @(isGenerating ? "HECKLING..." : "HECKLE! 🍅")
                     </button>
                 </div>
+                
+                <!-- Tension Meter -->
+                <div style="margin-top: 2rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 0.5rem;">
+                        <span>Room Energy</span>
+                        <span>Tension</span>
+                    </div>
+                    <div class="tension-bar-container" style="width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden;">
+                        <div class="tension-bar" style="width: @(tensionScore)%; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-red)); transition: width 0.5s ease-out;"></div>
+                    </div>
+                </div>
+
                 @if (playQueue.Count > 0)
                 {
-                    <div style="margin-top: 1rem; font-size: 0.9rem; color: #888; text-align: right;">
+                    <div style="margin-top: 1.5rem; font-size: 0.85rem; color: #666; text-align: right; text-transform: uppercase; letter-spacing: 1px;">
                         Next up: @playQueue.First().Premise
                     </div>
                 }
@@ -86,10 +107,50 @@
 </div>
 
 <style>
+    .spotlight {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255, 42, 95, 0.15) 0%, transparent 70%);
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        z-index: 1;
+        transition: transform 0.1s ease-out;
+        pointer-events: none;
+    }
+    .fade-in-text {
+        animation: fadeIn 0.5s ease-in;
+    }
+    .haptic-btn {
+        transition: transform 0.1s, filter 0.2s;
+        cursor: pointer;
+    }
+    .haptic-btn:active {
+        transform: scale(0.95);
+        filter: brightness(1.2);
+    }
+    .heckle-input:focus {
+        border-color: var(--neon-red) !important;
+        box-shadow: 0 0 15px rgba(255, 42, 95, 0.3) !important;
+        outline: none;
+    }
+    .star-rating:hover {
+        transform: scale(1.2);
+    }
     @@keyframes pulse {
         0% { opacity: 1; }
         50% { opacity: 0.5; }
         100% { opacity: 1; }
+    }
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 </style>
 
@@ -104,6 +165,8 @@
     private int starRating = 5;
     private string userComment = "";
     private bool isSubmitting = false;
+
+    private int tensionScore = 20; // 0 to 100
 
     private bool showStarted = false;
     private bool isListeningForLaughter = false;
