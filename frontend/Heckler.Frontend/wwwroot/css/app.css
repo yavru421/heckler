@@ -1,21 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Oswald:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@500;600;700&display=swap');
 
 :root {
-    --bg-base: #121214; /* Deep charcoal/black */
-    --surface-glass: rgba(30, 30, 35, 0.7);
-    --surface-border: rgba(255, 255, 255, 0.05);
+    --bg-base: #0a0a0c; /* Deep studio black */
+    --surface-glass: rgba(18, 18, 24, 0.75);
+    --surface-border: rgba(255, 255, 255, 0.08);
     
-    --neon-red: #ff2a5f; /* Cyberpunk Pink */
-    --neon-green: #39ff14; /* Acid Green */
-    --neon-purple: #c23b22; /* Burnt orange/red */
-    --text-primary: #f0f0f0;
-    --text-secondary: #8c8c8c;
+    --neon-red: #ff3366; /* Vibrant Red/Pink */
+    --neon-green: #00ff88; /* Acid Emerald Green */
+    --neon-purple: #9d4edd; /* Electric Violet */
+    --neon-blue: #00f0ff; /* Cyberpunk Cyan */
+    
+    --text-primary: #f8f9fa;
+    --text-secondary: #a0a0ab;
 }
 
 body {
     background-color: var(--bg-base);
-    background-image: radial-gradient(circle at top right, rgba(255, 42, 95, 0.1), transparent 40%),
-                      radial-gradient(circle at bottom left, rgba(57, 255, 20, 0.05), transparent 40%);
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(157, 78, 221, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(255, 51, 102, 0.04) 0%, transparent 50%);
+    background-attachment: fixed;
     color: var(--text-primary);
     font-family: 'Inter', sans-serif;
     margin: 0;
@@ -25,45 +30,149 @@ body {
 h1, h2, h3, .neon-text {
     font-family: 'Oswald', sans-serif;
     text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
-/* Glassmorphism Utility */
+/* Glassmorphism Panel Styling */
 .glass-panel {
     background: var(--surface-glass);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--surface-border);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.glass-panel:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Custom premium design buttons */
+.btn-generate {
+    font-family: 'Oswald', sans-serif;
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-red));
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 1.1rem 2.5rem;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(157, 78, 221, 0.4);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-generate:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255, 51, 102, 0.7);
+    filter: brightness(1.1);
+}
+
+.btn-generate:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-generate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Core Brand Aesthetics */
+.logo h1 {
+    margin: 0;
+    font-size: 2.2rem;
+    letter-spacing: 3px;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+}
+
+.neon-text {
+    color: var(--neon-red);
+    text-shadow: 0 0 15px rgba(255, 51, 102, 0.7);
 }
 
 /* Animations */
-@keyframes slideInUp {
-    from { opacity: 0; transform: translateY(20px); }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulseGlow {
-    0% { box-shadow: 0 0 10px rgba(181, 55, 242, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(181, 55, 242, 0.6); }
-    100% { box-shadow: 0 0 10px rgba(181, 55, 242, 0.3); }
+    0% { box-shadow: 0 0 10px rgba(255, 51, 102, 0.2); }
+    50% { box-shadow: 0 0 25px rgba(255, 51, 102, 0.5); }
+    100% { box-shadow: 0 0 10px rgba(255, 51, 102, 0.2); }
 }
 
-#blazor-error-ui {
-    background: lightyellow;
-    bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
-    display: none;
-    left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
-    position: fixed;
-    width: 100%;
-    z-index: 1000;
+@keyframes pulseGreen {
+    0% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
+    50% { box-shadow: 0 0 25px rgba(0, 255, 136, 0.5); }
+    100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
 }
 
-#blazor-error-ui .dismiss {
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.fade-in-text {
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Interactive elements */
+.haptic-btn {
+    transition: transform 0.1s ease, filter 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;
+}
+
+.haptic-btn:hover {
+    filter: brightness(1.15);
+}
+
+.haptic-btn:active {
+    transform: scale(0.96) !important;
+}
+
+/* Custom visualizer spotlight */
+.spotlight {
     position: absolute;
-    right: 0.75rem;
-    top: 0.5rem;
+    top: 50%;
+    left: 50%;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(255, 51, 102, 0.18) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    z-index: 0;
+    transition: transform 0.15s cubic-bezier(0.165, 0.84, 0.44, 1);
+    pointer-events: none;
+}
+
+/* Style rating elements */
+.star-rating {
+    font-size: 3rem;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.star-rating:hover {
+    transform: scale(1.15);
+}
+
+/* Global layout tweaks */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 2.5rem;
+    margin-bottom: 2rem;
+    background: rgba(10, 10, 12, 0.85);
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.stage-container {
+    max-width: 750px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem 1.5rem;
 }

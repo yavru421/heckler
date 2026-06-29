@@ -71,5 +71,22 @@ namespace Heckler.Frontend.Services
                 return false;
             }
         }
+
+        public async Task<JokeModel?> ReactToRatingAsync(string jokeId, string rating)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/comedian/react", new { jokeId, rating });
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<JokeModel>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting comedian reaction: {ex.Message}");
+            }
+            return null;
+        }
     }
 }

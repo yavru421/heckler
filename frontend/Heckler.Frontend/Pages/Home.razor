@@ -3,30 +3,38 @@
 @inject IJSRuntime JSRuntime
 
 <div class="heckler-app">
-    <header class="app-header glass-panel">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; border-top: none;">
         <div class="logo">
             <h1>HECKL<span class="neon-text">ER</span></h1>
-            <div class="age-warning" style="color: var(--neon-green); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; margin-top: -10px; margin-bottom: 20px;">🎟️ UNCENSORED COMEDY (MATURE AUDIENCES)</div>
+            <div class="age-warning" style="color: var(--neon-green); text-transform: uppercase; letter-spacing: 2.5px; font-size: 0.75rem; margin-top: -6px; font-weight: 600;">🎟️ Uncensored Comedy Vault</div>
         </div>
     </header>
 
-    <main class="app-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh;">
+    <main class="app-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 2rem 1rem;">
         @if (!enteredClub)
         {
-            <div class="enter-club-container">
-                <button class="btn-generate" style="font-size: 2rem; padding: 2rem 4rem;" @onclick="EnterClub">Enter the Club 🎤</button>
+            <div class="enter-club-container fade-in-text" style="text-align: center;">
+                <h2 style="font-size: 2.5rem; margin-bottom: 2rem; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.1);">Welcome to the Cyber Comedy Lounge</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 3rem; font-size: 1.1rem; max-width: 500px; line-height: 1.6; margin-left: auto; margin-right: auto;">
+                    Step inside for live sets, observational bits, and a comedian that reacts in real-time.
+                </p>
+                <button class="btn-generate haptic-btn" style="font-size: 1.5rem; padding: 1.8rem 3.6rem; border-radius: 50px; background: linear-gradient(135deg, var(--neon-red), var(--neon-purple)); box-shadow: 0 0 30px rgba(255, 51, 102, 0.4); animation: pulseGlow 2.5s infinite;" @onclick="EnterClub">
+                    Enter the Club 🎤
+                </button>
             </div>
         }
         else
         {
-            <div class="main-menu glass-panel" style="padding: 2rem; text-align: center; display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 500px;">
-                <h2>Choose Your Stage</h2>
-                <div class="menu-options" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <button class="btn-generate" @onclick='() => NavigateTo("/writers")'>
-                        📝 Writers Room (Read & Rate)
+            <div class="main-menu glass-panel fade-in-text" style="padding: 3rem 2rem; text-align: center; display: flex; flex-direction: column; gap: 2rem; width: 100%; max-width: 500px; border-color: rgba(255,255,255,0.1);">
+                <h2 style="margin-bottom: 0.5rem; font-size: 2rem; color: #fff;">Choose Your Experience</h2>
+                <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">Select a room to begin</p>
+                
+                <div class="menu-options" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                    <button class="btn-generate haptic-btn" @onclick='() => NavigateTo("/live")' style="padding: 1.5rem; font-size: 1.25rem; background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue)); box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);">
+                        🎙️ LIVE SHOW (Standard)
                     </button>
-                    <button class="btn-generate" @onclick='() => NavigateTo("/live")'>
-                        🎙️ Live Show (Audio First)
+                    <button class="btn-generate haptic-btn" @onclick='() => NavigateTo("/writers")' style="padding: 1.5rem; font-size: 1.25rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; box-shadow: none;">
+                        📝 WRITERS ROOM (Review Bit-by-Bit)
                     </button>
                 </div>
             </div>

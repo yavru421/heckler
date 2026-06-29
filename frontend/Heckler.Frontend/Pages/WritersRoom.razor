@@ -37,15 +37,30 @@
 
             @if (unratedJokes.Count == 0)
             {
-                <div class="empty-card glass-panel">
-                    <p class="empty-text">The stage is empty. Hit the button to get roasted by the AI.</p>
+                <div class="empty-card glass-panel" style="padding: 3rem; text-align: center;">
+                    <p class="empty-text">The stage is empty. Hit the button to generate a new routine bit!</p>
                 </div>
             }
             else
             {
-                // Prioritize showing the newly generated active joke if it exists and is unrated
                 var activeJoke = unratedJokes.FirstOrDefault(j => j.Id == activeJokeId) ?? unratedJokes.First();
-                <JokeCard @key="activeJoke.Id" Joke="activeJoke" OnVoted="() => HandleVote(activeJoke.Id)" />
+                <div class="glass-panel joke-card-premium fade-in-text" style="padding: 2.5rem; text-align: center; position: relative; margin-top: 1rem; border-color: rgba(255, 255, 255, 0.1);">
+                    <div style="font-size: 0.85rem; color: var(--neon-red); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem; font-weight: bold;">
+                        @activeJoke.Premise
+                    </div>
+                    <p style="font-size: 1.6rem; line-height: 1.5; font-weight: 300; margin-bottom: 2rem; color: #f0f0f0;">
+                        @activeJoke.Text
+                    </p>
+                    
+                    <div style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 1.5rem;">
+                        <button class="btn-generate haptic-btn" @onclick='() => HandleManualRating(activeJoke.Id, true)' style="padding: 0.8rem 2rem; font-size: 1.1rem; background: var(--neon-green); color: black; border: none; font-weight: bold; border-radius: 8px; box-shadow: 0 0 10px rgba(42, 255, 95, 0.2);">
+                            🔥 KILL
+                        </button>
+                        <button class="btn-generate haptic-btn" @onclick='() => HandleManualRating(activeJoke.Id, false)' style="padding: 0.8rem 2rem; font-size: 1.1rem; background: var(--neon-red); color: white; border: none; font-weight: bold; border-radius: 8px; box-shadow: 0 0 10px rgba(255, 42, 95, 0.2);">
+                            🍅 BOMB
+                        </button>
+                    </div>
+                </div>
             }
         }
     </div>
@@ -89,9 +104,16 @@
         RatedJokeIds.Add(jokeId);
         if (activeJokeId == jokeId)
         {
-            activeJokeId = null; // Reset spotlight
+            activeJokeId = null; 
         }
         await LoadJokes();
+    }
+
+    private async Task HandleManualRating(string jokeId, bool isKill)
+    {
+        var ratingStr = isKill ? "kill" : "bomb";
+        _ = JokeService.RateJokeAsync(jokeId, ratingStr);
+        await HandleVote(jokeId);
     }
 
     private async Task GenerateJoke()

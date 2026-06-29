@@ -1,4 +1,5 @@
 window.audioCache = {};
+window.activeAudio = null;
 
 window.prefetchJokeAudio = function(jokeId) {
     if (window.audioCache[jokeId]) return;
@@ -10,9 +11,21 @@ window.prefetchJokeAudio = function(jokeId) {
 };
 
 window.speakJoke = function(jokeId, dotNetHelper) {
+    // If audio is already playing, interrupt it first
+    if (window.activeAudio) {
+        try {
+            window.activeAudio.pause();
+            window.activeAudio.onended = null;
+        } catch(e) {}
+    }
+
     var audio = window.audioCache[jokeId] || new Audio('/api/jokes/' + jokeId + '/audio');
+    window.activeAudio = audio;
     
     var cleanup = function() {
+        if (window.activeAudio === audio) {
+            window.activeAudio = null;
+        }
         delete window.audioCache[jokeId];
         dotNetHelper.invokeMethodAsync('AudioEndedCallback');
     };
@@ -40,7 +53,6 @@ window.speakJoke = function(jokeId, dotNetHelper) {
 };
 
 window.initTTS = function() {
-    // Initialize empty audio cache
     window.audioCache = {};
     
     // Play a tiny silent audio to unlock AudioContext in browsers
@@ -68,4 +80,19 @@ window.initTTS = function() {
         updateVisualizer();
         
     } catch(e) {}
+};
+
+// Extension: manual interrupt of TTS audio streams
+if (!window.audioSentiment) {
+    window.audioSentiment = {};
+}
+window.audioSentiment.interruptPlayback = function() {
+    if (window.activeAudio) {
+        try {
+            window.activeAudio.pause();
+            // Nullify onended callback to prevent double trigger of next joke sequence
+            window.activeAudio.onended = null;
+        } catch(e) {}
+        window.activeAudio = null;
+    }
 };

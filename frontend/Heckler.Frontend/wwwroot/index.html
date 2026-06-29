@@ -35,33 +35,31 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script src="js/sentiment.js"></script>
     <script src="js/tts.js"></script>
     <script>
-        // Request persistent storage defensively for iOS 7-day eviction
-        if (navigator.storage && navigator.storage.persist) {
-            navigator.storage.persist().then(granted => {
-                if (granted) console.log("Storage will not be cleared except by explicit user action");
-                else console.log("Storage may be cleared by the UA under storage pressure.");
+        window.errors = [];
+        window.onerror = function(message, source, lineno, colno, error) {
+            window.errors.push({message: message, source: source, lineno: lineno, error: error ? error.stack : null});
+            return false;
+        };
+        window.onunhandledrejection = function(event) {
+            window.errors.push({message: "Unhandled promise rejection: " + event.reason});
+        };
+
+        // Register service worker normally for PWA loading experience
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(registration => {
+                registration.onupdatefound = () => {
+                    const installingWorker = registration.installing;
+                    if (installingWorker == null) return;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('New content available. Please refresh.');
+                        }
+                    };
+                };
             });
         }
-
-        navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(registration => {
-            registration.onupdatefound = () => {
-                const installingWorker = registration.installing;
-                if (installingWorker == null) {
-                    return;
-                }
-                installingWorker.onstatechange = () => {
-                    if (installingWorker.state === 'installed') {
-                        if (navigator.serviceWorker.controller) {
-                            // A new service worker has been installed and is ready to take over.
-                            console.log('New or updated content is available. Please refresh the page to update.');
-                        }
-                    }
-                };
-            };
-        });
     </script>
 </body>
 

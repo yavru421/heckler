@@ -45,18 +45,36 @@
                 {
                     <div style="padding: 3rem 0; position: relative; z-index: 2;">
                         <h2 style="margin-bottom: 1rem; font-size: 2.5rem;">Ready for the show?</h2>
-                        <p style="color: #888; margin-bottom: 3rem; font-size: 1.1rem;">We use your microphone to detect laughter and dynamically grade the comedian.</p>
+                        <p style="color: #888; margin-bottom: 3rem; font-size: 1.1rem;">Rate the comedian's jokes in real-time to guide their set!</p>
                         <button class="btn-generate haptic-btn" @onclick="StartShow" style="padding: 1.5rem 3rem; font-size: 1.3rem; background: var(--neon-red); color: white; border: none; font-weight: bold; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 42, 95, 0.4);">
-                            START SHOW (Enable Mic)
+                            START SHOW 🎙️
                         </button>
                     </div>
                 }
                 else if (activeJoke != null)
                 {
                     <div style="position: relative; z-index: 2;">
+                        @if (tensionScore >= 80)
+                        {
+                            <div style="color: var(--neon-red); font-weight: bold; font-size: 1.2rem; margin-bottom: 1rem; animation: pulse 0.8s infinite;">
+                                ⚠️ COMEDIAN IS BOMBING! (TENSION HIGH)
+                            </div>
+                        }
                         <h3 style="margin-bottom: 1.5rem; color: var(--neon-red); font-size: 1.5rem; letter-spacing: 2px;">@activeJoke.Premise</h3>
                         <p class="fade-in-text" style="font-size: 1.8rem; margin-bottom: 2rem; line-height: 1.4; font-weight: 300;">@activeJoke.Text</p>
                         
+                        @if (activeJoke.Premise != "[comeback] bomb" && !activeJoke.Premise.StartsWith("[comeback]"))
+                        {
+                            <div class="stage-controls" style="display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem; position: relative; z-index: 10;">
+                                <button class="btn-generate haptic-btn" @onclick="() => HandleManualRating(true)" style="padding: 1rem 2rem; font-size: 1.1rem; background: var(--neon-green); color: black; border: none; font-weight: bold; border-radius: 8px; box-shadow: 0 0 10px rgba(42, 255, 95, 0.2);">
+                                    🔥 KILL
+                                </button>
+                                <button class="btn-generate haptic-btn" @onclick="() => HandleManualRating(false)" style="padding: 1rem 2rem; font-size: 1.1rem; background: var(--neon-red); color: white; border: none; font-weight: bold; border-radius: 8px; box-shadow: 0 0 10px rgba(255, 42, 95, 0.2);">
+                                    🍅 BOMB
+                                </button>
+                            </div>
+                        }
+
                         @if (isListeningForLaughter)
                         {
                             <div style="margin-top: 2rem; color: var(--neon-green); font-size: 1.1rem; animation: pulse 1s infinite; font-weight: bold;">
@@ -209,10 +227,6 @@
 
         showStarted = true;
         StateHasChanged();
-        
-        try {
-            _ = JSRuntime.InvokeAsync<bool>("window.audioSentiment.startListening");
-        } catch { }
 
         await EnsureQueue();
         if (playQueue.Any())
@@ -227,7 +241,6 @@
 
     private async Task EnsureQueue()
     {
-        // Keep exactly 1 joke in the chamber to ensure seamless playback, up to a max of 5 played in total
         while (playQueue.Count < 1 && jokesPlayed + playQueue.Count < 4)
         {
             isGenerating = true;
@@ -239,6 +252,10 @@
                 try {
                     _ = JSRuntime.InvokeVoidAsync("window.prefetchJokeAudio", newJoke.Id);
                 } catch { }
+            }
+            else
+            {
+                break;
             }
             isGenerating = false;
             StateHasChanged();
@@ -255,7 +272,6 @@
         var newJoke = await JokeService.GenerateJokeAsync("heckle", heckleText);
         if (newJoke != null)
         {
-            // Insert heckle response immediately at the front of the queue
             playQueue.Insert(0, newJoke);
             try {
                 _ = JSRuntime.InvokeVoidAsync("window.prefetchJokeAudio", newJoke.Id);
@@ -267,29 +283,78 @@
         StateHasChanged();
     }
 
-    private async Task AudioEnded()
+    private async Task HandleManualRating(bool isKill)
     {
-        if (activeJoke != null)
+        if (activeJoke == null) return;
+
+        try {
+            await JSRuntime.InvokeVoidAsync("window.audioSentiment.interruptPlayback");
+        } catch { }
+
+        var jokeId = activeJoke.Id;
+        var ratingStr = isKill ? "kill" : "bomb";
+
+        if (isKill)
         {
-            var jokeToRate = activeJoke.Id;
-            isListeningForLaughter = true;
-            StateHasChanged();
+            tensionScore = Math.Max(0, tensionScore - 15);
+        }
+        else
+        {
+            tensionScore = Math.Min(100, tensionScore + 20);
+        }
+        StateHasChanged();
 
-            bool laughed = false;
-            try {
-                laughed = await JSRuntime.InvokeAsync<bool>("window.audioSentiment.measureLaughter", 4000);
-            } catch {
-                await Task.Delay(4000); // Fallback wait
-            }
-            
-            isListeningForLaughter = false;
-            StateHasChanged();
+        _ = JokeService.RateJokeAsync(jokeId, ratingStr);
 
-            // Auto-rate the joke based on microphone volume
-            _ = JokeService.RateJokeAsync(jokeToRate, laughed ? "kill" : "bomb");
+        if (tensionScore >= 100)
+        {
+            isShowOver = true;
+            activeJoke = null;
+            StateHasChanged();
+            return;
         }
 
+        if (!isKill)
+        {
+            await PlayComedianComeback(jokeId);
+        }
+        else
+        {
+            jokesPlayed++;
+            await AdvanceShow();
+        }
+    }
+
+    private async Task PlayComedianComeback(string jokeId)
+    {
+        isGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            var comeback = await JokeService.ReactToRatingAsync(jokeId, "bomb");
+            if (comeback != null)
+            {
+                activeJoke = comeback;
+                isGenerating = false;
+                StateHasChanged();
+
+                await PlayJokeAudio();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Comeback failed: {ex.Message}");
+        }
+
+        isGenerating = false;
         jokesPlayed++;
+        await AdvanceShow();
+    }
+
+    private async Task AdvanceShow()
+    {
         if (jokesPlayed >= 5)
         {
             isShowOver = true;
@@ -310,10 +375,27 @@
             activeJoke = playQueue.First();
             playQueue.RemoveAt(0);
             StateHasChanged();
-            
             _ = PlayJokeAudio();
-            
             _ = EnsureQueue();
+        }
+    }
+
+    private async Task AudioEnded()
+    {
+        if (activeJoke != null)
+        {
+            // If we just finished playing a comeback reaction, we don't want to wait for a rating.
+            // We just advance the show!
+            if (activeJoke.Premise == "[comeback] bomb" || activeJoke.Premise.StartsWith("[comeback]"))
+            {
+                jokesPlayed++;
+                await AdvanceShow();
+                return;
+            }
+
+            // Otherwise, we just pause and wait for the user to rate the joke manually.
+            // No automatic microphone checks or rating.
+            StateHasChanged();
         }
     }
 
