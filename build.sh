@@ -13,7 +13,7 @@ chmod +x dotnet-install.sh
 ./dotnet-install.sh -c 10.0 -InstallDir ./dotnet
 
 # Ensure the dotnet binary is executable (Cloudflare CI strips execute bits)
-chmod +x ./dotnet/dotnet
+chmod -R +x ./dotnet/
 
 # Clean old output and local build artifacts to force a complete recompilation
 rm -rf output
