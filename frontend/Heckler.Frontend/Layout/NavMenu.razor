@@ -1,39 +1,30 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Heckler.Frontend</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
-
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+<div class="nav-menu">
+    <nav style="display: flex; gap: 0.5rem; padding: 0.75rem 1.5rem; background: rgba(10,10,12,0.9); border-bottom: 1px solid var(--surface-border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
+            🏠 Home
+        </NavLink>
+        <NavLink class="nav-link" href="feed" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
+            📜 Feed
+        </NavLink>
+        <NavLink class="nav-link" href="submit" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
+            🎤 Submit
+        </NavLink>
+        <NavLink class="nav-link" href="shame" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
+            💀 Shame
+        </NavLink>
+        <NavLink class="nav-link" href="fame" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
+            🏆 Fame
+        </NavLink>
     </nav>
 </div>
 
-@code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
+<style>
+    .nav-link:hover, .nav-link.active {
+        color: var(--text-primary) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
     }
-}
+    .nav-link.active {
+        color: var(--neon-red) !important;
+        background: rgba(255, 51, 102, 0.1) !important;
+    }
+</style>

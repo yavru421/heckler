@@ -1,0 +1,192 @@
+@page "/feed"
+@inject HecklerApi Api
+@inject IdentityService Identity
+
+<div class="heckler-app">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 1.5rem; border-top: none;">
+        <div class="logo">
+            <h1>THE <span class="neon-text">FEED</span></h1>
+        </div>
+    </header>
+
+    <main class="stage-container">
+        <!-- Sort Tabs -->
+        <div id="sort-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
+            @foreach (var tab in sortTabs)
+            {
+                var isActive = activeSort == tab.Key;
+                <button id="sort-@tab.Key" class="haptic-btn" @onclick="() => ChangeSort(tab.Key)"
+                    style="padding: 0.6rem 1.2rem; border-radius: 20px; border: 1px solid @(isActive ? "var(--neon-red)" : "var(--surface-border)"); background: @(isActive ? "rgba(255,51,102,0.15)" : "transparent"); color: @(isActive ? "var(--neon-red)" : "var(--text-secondary)"); font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                    @tab.Value
+                </button>
+            }
+        </div>
+
+        <!-- Joke Feed -->
+        @if (isLoading && jokes.Count == 0)
+        {
+            <div class="glass-panel fade-in-text" style="padding: 4rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem; animation: bounce 2s infinite;">🎙️</div>
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">Loading the feed...</p>
+            </div>
+        }
+        else if (jokes.Count == 0)
+        {
+            <div class="glass-panel fade-in-text" style="padding: 4rem; text-align: center;">
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">No jokes yet. Be the first to take the stage!</p>
+                <button id="btn-submit-first" class="btn-generate haptic-btn" style="margin-top: 1.5rem;" @onclick='() => Nav.NavigateTo("/submit")'>
+                    🎤 Submit a Joke
+                </button>
+            </div>
+        }
+        else
+        {
+            @foreach (var joke in jokes)
+            {
+                <div class="glass-panel fade-in-text" style="padding: 1.5rem; margin-bottom: 1rem; border-color: rgba(255,255,255,0.06);" id="joke-@joke.Id">
+                    <!-- Author + Category -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <span style="color: var(--neon-purple); font-weight: 600; font-size: 0.9rem;">@@@joke.AuthorName</span>
+                        <span style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.05); padding: 0.25rem 0.6rem; border-radius: 10px;">@joke.Category</span>
+                    </div>
+
+                    <!-- Joke Text -->
+                    <p style="font-size: 1.15rem; line-height: 1.6; margin-bottom: 1.25rem; color: var(--text-primary); font-weight: 300;">@joke.Text</p>
+
+                    <!-- Vote Buttons -->
+                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem;">
+                        <button id="kill-@joke.Id" class="haptic-btn" @onclick="() => RateJoke(joke, true)"
+                            style="padding: 0.5rem 1.2rem; border-radius: 8px; border: 1px solid var(--neon-green); background: @(votedJokes.ContainsKey(joke.Id) && votedJokes[joke.Id] == "kill" ? "rgba(0,255,136,0.2)" : "transparent"); color: var(--neon-green); font-family: 'Oswald', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                            🔥 KILL (@joke.Kills)
+                        </button>
+                        <button id="bomb-@joke.Id" class="haptic-btn" @onclick="() => RateJoke(joke, false)"
+                            style="padding: 0.5rem 1.2rem; border-radius: 8px; border: 1px solid var(--neon-red); background: @(votedJokes.ContainsKey(joke.Id) && votedJokes[joke.Id] == "bomb" ? "rgba(255,51,102,0.2)" : "transparent"); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                            🍅 BOMB (@joke.Bombs)
+                        </button>
+                    </div>
+
+                    <!-- Top Heckle -->
+                    @if (joke.TopHeckle != null)
+                    {
+                        <div style="padding: 0.75rem 1rem; background: rgba(0,255,136,0.05); border-left: 3px solid var(--neon-green); border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+                            <div style="font-size: 0.75rem; color: var(--neon-green); margin-bottom: 0.3rem; font-weight: 600;">💬 TOP HECKLE by @@@joke.TopHeckle.AuthorName</div>
+                            <p style="font-size: 0.95rem; color: var(--text-primary); margin: 0; font-style: italic;">"@joke.TopHeckle.Text"</p>
+                            <div style="margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-secondary);">🔥 @joke.TopHeckle.Kills  🍅 @joke.TopHeckle.Bombs</div>
+                        </div>
+                    }
+
+                    <!-- Heckle Input -->
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="heckle-input-@joke.Id" @bind="heckleTexts[joke.Id]" placeholder="Write a heckle..." 
+                            style="flex: 1; padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.4); color: white; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s;"
+                            @onfocus="@(() => {})" />
+                        <button id="heckle-btn-@joke.Id" class="haptic-btn" @onclick="() => SubmitHeckle(joke.Id)"
+                            style="padding: 0.6rem 1rem; border-radius: 8px; border: none; background: var(--neon-red); color: white; font-family: 'Oswald', sans-serif; font-size: 0.8rem; cursor: pointer; white-space: nowrap;">
+                            HECKLE 🍅
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @if (!isLoading && jokes.Count >= 20)
+            {
+                <button id="btn-load-more" class="btn-generate haptic-btn" @onclick="LoadMore" style="width: 100%; margin-top: 1rem; padding: 1rem;">
+                    Load More
+                </button>
+            }
+        }
+    </main>
+</div>
+
+@inject NavigationManager Nav
+
+@code {
+    private List<JokeModel> jokes = new();
+    private Dictionary<string, string> heckleTexts = new();
+    private Dictionary<string, string> votedJokes = new();
+    private string activeSort = "hot";
+    private int currentPage = 0;
+    private bool isLoading = false;
+
+    private Dictionary<string, string> sortTabs = new()
+    {
+        { "hot", "🔥 Hot" },
+        { "new", "🆕 New" },
+        { "controversial", "💀 Controversial" },
+        { "bombing", "🍅 Bombing" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadJokes();
+    }
+
+    private async Task LoadJokes()
+    {
+        isLoading = true;
+        StateHasChanged();
+        var results = await Api.GetFeedAsync(activeSort, currentPage);
+        jokes = results;
+        foreach (var j in jokes)
+        {
+            if (!heckleTexts.ContainsKey(j.Id)) heckleTexts[j.Id] = "";
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task ChangeSort(string sort)
+    {
+        activeSort = sort;
+        currentPage = 0;
+        await LoadJokes();
+    }
+
+    private async Task LoadMore()
+    {
+        currentPage++;
+        isLoading = true;
+        StateHasChanged();
+        var moreJokes = await Api.GetFeedAsync(activeSort, currentPage);
+        foreach (var j in moreJokes)
+        {
+            if (!heckleTexts.ContainsKey(j.Id)) heckleTexts[j.Id] = "";
+        }
+        jokes.AddRange(moreJokes);
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void RateJoke(JokeModel joke, bool isKill)
+    {
+        if (votedJokes.ContainsKey(joke.Id)) return;
+        
+        // Optimistic UI
+        if (isKill) joke.Kills++;
+        else joke.Bombs++;
+        votedJokes[joke.Id] = isKill ? "kill" : "bomb";
+        StateHasChanged();
+
+        // Fire and forget
+        _ = Api.RateJokeAsync(joke.Id, isKill ? "kill" : "bomb");
+    }
+
+    private async Task SubmitHeckle(string jokeId)
+    {
+        if (!heckleTexts.ContainsKey(jokeId) || string.IsNullOrWhiteSpace(heckleTexts[jokeId])) return;
+
+        var username = await Identity.GetUsernameAsync() ?? "Anonymous";
+        var heckle = await Api.HeckleJokeAsync(jokeId, heckleTexts[jokeId], username);
+        heckleTexts[jokeId] = "";
+        
+        if (heckle != null)
+        {
+            var joke = jokes.FirstOrDefault(j => j.Id == jokeId);
+            if (joke != null && joke.TopHeckle == null)
+            {
+                joke.TopHeckle = heckle;
+            }
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,58 @@
+@page "/shame"
+@inject HecklerApi Api
+
+<div class="heckler-app">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none; border-color: var(--neon-red);">
+        <div class="logo">
+            <h1>WALL OF <span class="neon-text">SHAME</span></h1>
+            <div style="color: var(--neon-red); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;">💀 Where bad jokes go to die</div>
+        </div>
+    </header>
+
+    <main class="stage-container">
+        @if (isLoading)
+        {
+            <div class="glass-panel" style="padding: 4rem; text-align: center;">
+                <p style="color: var(--text-secondary);">Digging up the corpses...</p>
+            </div>
+        }
+        else if (jokes.Count == 0)
+        {
+            <div class="glass-panel" style="padding: 4rem; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🏜️</div>
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">No jokes bad enough yet. Give it time.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var joke in jokes)
+            {
+                <div class="glass-panel fade-in-text" style="padding: 1.5rem; margin-bottom: 1rem; border-color: rgba(255,51,102,0.3); border-left: 4px solid var(--neon-red);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="color: var(--neon-red); font-weight: 600;">@@@joke.AuthorName</span>
+                        <span style="color: var(--neon-red); font-size: 0.85rem; font-weight: bold;">🍅 @joke.Bombs bombs</span>
+                    </div>
+                    <p style="font-size: 1.1rem; line-height: 1.5; color: var(--text-primary); font-weight: 300; margin-bottom: 1rem;">@joke.Text</p>
+                    @if (joke.TopHeckle != null)
+                    {
+                        <div style="padding: 0.75rem 1rem; background: rgba(0,255,136,0.05); border-left: 3px solid var(--neon-green); border-radius: 0 8px 8px 0;">
+                            <div style="font-size: 0.7rem; color: var(--neon-green); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 1px;">⚰️ The Killing Blow by @@@joke.TopHeckle.AuthorName</div>
+                            <p style="font-size: 0.95rem; color: var(--text-primary); margin: 0; font-style: italic;">"@joke.TopHeckle.Text"</p>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </main>
+</div>
+
+@code {
+    private List<JokeModel> jokes = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        jokes = await Api.GetWallOfShameAsync();
+        isLoading = false;
+    }
+}

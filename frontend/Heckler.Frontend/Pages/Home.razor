@@ -1,68 +1,32 @@
 @page "/"
-@inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
+@inject NavigationManager Nav
 
 <div class="heckler-app">
-    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; border-top: none;">
-        <div class="logo">
-            <h1>HECKL<span class="neon-text">ER</span></h1>
-            <div class="age-warning" style="color: var(--neon-green); text-transform: uppercase; letter-spacing: 2.5px; font-size: 0.75rem; margin-top: -6px; font-weight: 600;">🎟️ Uncensored Comedy Vault</div>
-        </div>
-    </header>
+    <main class="app-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; padding: 2rem 1rem;">
+        <div class="fade-in-text" style="text-align: center;">
+            <h1 style="font-size: 4rem; margin-bottom: 0; letter-spacing: 6px; font-family: 'Oswald', sans-serif;">HECKL<span class="neon-text">ER</span></h1>
+            <div style="color: var(--neon-green); text-transform: uppercase; letter-spacing: 3px; font-size: 0.8rem; margin-top: 0.5rem; font-weight: 600;">🎟️ Crowd-Sourced Comedy</div>
+            
+            <p style="color: var(--text-secondary); margin: 2rem auto; font-size: 1.1rem; max-width: 450px; line-height: 1.7;">
+                Post jokes. Heckle others. Vote ruthlessly. The crowd decides who's funny.
+            </p>
 
-    <main class="app-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 2rem 1rem;">
-        @if (!enteredClub)
-        {
-            <div class="enter-club-container fade-in-text" style="text-align: center;">
-                <h2 style="font-size: 2.5rem; margin-bottom: 2rem; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.1);">Welcome to the Cyber Comedy Lounge</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 3rem; font-size: 1.1rem; max-width: 500px; line-height: 1.6; margin-left: auto; margin-right: auto;">
-                    Step inside for live sets, observational bits, and a comedian that reacts in real-time.
-                </p>
-                <button class="btn-generate haptic-btn" style="font-size: 1.5rem; padding: 1.8rem 3.6rem; border-radius: 50px; background: linear-gradient(135deg, var(--neon-red), var(--neon-purple)); box-shadow: 0 0 30px rgba(255, 51, 102, 0.4); animation: pulseGlow 2.5s infinite;" @onclick="EnterClub">
-                    Enter the Club 🎤
+            <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 400px; margin: 2rem auto;">
+                <button id="btn-browse-feed" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/feed")' style="padding: 1.4rem; font-size: 1.2rem; background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue)); box-shadow: 0 4px 20px rgba(0, 240, 255, 0.3);">
+                    📜 BROWSE THE FEED
                 </button>
-            </div>
-        }
-        else
-        {
-            <div class="main-menu glass-panel fade-in-text" style="padding: 3rem 2rem; text-align: center; display: flex; flex-direction: column; gap: 2rem; width: 100%; max-width: 500px; border-color: rgba(255,255,255,0.1);">
-                <h2 style="margin-bottom: 0.5rem; font-size: 2rem; color: #fff;">Choose Your Experience</h2>
-                <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">Select a room to begin</p>
-                
-                <div class="menu-options" style="display: flex; flex-direction: column; gap: 1.25rem;">
-                    <button class="btn-generate haptic-btn" @onclick='() => NavigateTo("/live")' style="padding: 1.5rem; font-size: 1.25rem; background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue)); box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);">
-                        🎙️ LIVE SHOW (Standard)
+                <button id="btn-take-stage" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/submit")' style="padding: 1.4rem; font-size: 1.2rem; background: linear-gradient(135deg, var(--neon-red), var(--neon-purple)); box-shadow: 0 4px 20px rgba(255, 51, 102, 0.3);">
+                    🎤 TAKE THE STAGE
+                </button>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="btn-wall-shame" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/shame")' style="flex: 1; padding: 1rem; font-size: 0.95rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--neon-red);">
+                        💀 Wall of Shame
                     </button>
-                    <button class="btn-generate haptic-btn" @onclick='() => NavigateTo("/writers")' style="padding: 1.5rem; font-size: 1.25rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.15); color: #fff; box-shadow: none;">
-                        📝 WRITERS ROOM (Review Bit-by-Bit)
+                    <button id="btn-hall-fame" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/fame")' style="flex: 1; padding: 1rem; font-size: 0.95rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--neon-green);">
+                        🏆 Hall of Fame
                     </button>
                 </div>
             </div>
-        }
+        </div>
     </main>
 </div>
-
-<!-- Hidden audio element for the laugh track -->
-<audio id="laugh-audio" src="/assets/laugh.mp3" preload="auto"></audio>
-
-@code {
-    private bool enteredClub = false;
-
-    private async Task EnterClub()
-    {
-        enteredClub = true;
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('laugh-audio').play().catch(() => {})");
-        }
-        catch
-        {
-            // Ignore if JS interop fails
-        }
-    }
-
-    private void NavigateTo(string path)
-    {
-        NavigationManager.NavigateTo(path);
-    }
-}

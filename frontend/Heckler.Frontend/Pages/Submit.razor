@@ -1,0 +1,133 @@
+@page "/submit"
+@inject HecklerApi Api
+@inject IdentityService Identity
+@inject NavigationManager Nav
+
+<div class="heckler-app">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
+        <div class="logo">
+            <h1>TAKE THE <span class="neon-text">STAGE</span></h1>
+        </div>
+    </header>
+
+    <main class="stage-container">
+        <div class="glass-panel fade-in-text" style="padding: 2.5rem; max-width: 600px; margin: 0 auto;">
+            @if (isSubmitted)
+            {
+                <div style="text-align: center; padding: 2rem 0;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎤</div>
+                    <h2 style="color: var(--neon-green); margin-bottom: 1rem;">You're on stage!</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Your joke is live. Let's see how the crowd reacts.</p>
+                    <button id="btn-view-feed" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/feed?sort=new")'>
+                        📜 View the Feed
+                    </button>
+                </div>
+            }
+            else
+            {
+                <!-- Username -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-family: 'Oswald', sans-serif;">Stage Name</label>
+                    <input type="text" id="input-username" @bind="username" placeholder="Pick a name (any name)..."
+                        style="width: 100%; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.5); color: white; font-size: 1rem; font-family: 'Inter', sans-serif; box-sizing: border-box;" />
+                </div>
+
+                <!-- Category -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-family: 'Oswald', sans-serif;">Category</label>
+                    <div id="category-picker" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        @foreach (var cat in categories)
+                        {
+                            var isActive = selectedCategory == cat.Key;
+                            <button id="cat-@cat.Key" class="haptic-btn" @onclick="() => selectedCategory = cat.Key"
+                                style="padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid @(isActive ? "var(--neon-purple)" : "var(--surface-border)"); background: @(isActive ? "rgba(157,78,221,0.2)" : "transparent"); color: @(isActive ? "var(--neon-purple)" : "var(--text-secondary)"); font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+                                @cat.Value
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Joke Text -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-family: 'Oswald', sans-serif;">Your Material</label>
+                    <textarea id="input-joke-text" @bind="jokeText" placeholder="Write your joke here..." rows="5"
+                        style="width: 100%; padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.5); color: white; font-size: 1.05rem; font-family: 'Inter', sans-serif; resize: vertical; line-height: 1.6; box-sizing: border-box;"></textarea>
+                    <div style="text-align: right; font-size: 0.75rem; color: @(jokeText.Length > 450 ? "var(--neon-red)" : "var(--text-secondary)"); margin-top: 0.3rem;">@jokeText.Length / 500</div>
+                </div>
+
+                <!-- Submit -->
+                <button id="btn-submit-joke" class="btn-generate haptic-btn" @onclick="SubmitJoke" disabled="@isSubmitting"
+                    style="width: 100%; padding: 1.3rem; font-size: 1.15rem; background: linear-gradient(135deg, var(--neon-red), var(--neon-purple)); box-shadow: 0 4px 20px rgba(255, 51, 102, 0.3);">
+                    @(isSubmitting ? "DROPPING THE MIC..." : "TAKE THE STAGE 🎤")
+                </button>
+
+                @if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    <p style="color: var(--neon-red); margin-top: 1rem; text-align: center; font-size: 0.9rem;">@errorMsg</p>
+                }
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private string username = "";
+    private string jokeText = "";
+    private string selectedCategory = "observational";
+    private bool isSubmitting = false;
+    private bool isSubmitted = false;
+    private string errorMsg = "";
+
+    private Dictionary<string, string> categories = new()
+    {
+        { "observational", "👀 Observational" },
+        { "roast", "🔥 Roast" },
+        { "one-liner", "⚡ One-Liner" },
+        { "dark", "🌑 Dark" },
+        { "cringe", "😬 Cringe" },
+        { "dictionary", "📖 Dictionary" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var savedName = await Identity.GetUsernameAsync();
+        if (!string.IsNullOrEmpty(savedName)) username = savedName;
+    }
+
+    private async Task SubmitJoke()
+    {
+        errorMsg = "";
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errorMsg = "Pick a stage name first!";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(jokeText))
+        {
+            errorMsg = "Can't go on stage with nothing to say!";
+            return;
+        }
+        if (jokeText.Length > 500)
+        {
+            errorMsg = "Too long! Keep it under 500 characters.";
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        await Identity.SetUsernameAsync(username);
+        var result = await Api.SubmitJokeAsync(jokeText, username, selectedCategory);
+
+        isSubmitting = false;
+        if (result != null)
+        {
+            isSubmitted = true;
+        }
+        else
+        {
+            errorMsg = "Something went wrong. Try again.";
+        }
+        StateHasChanged();
+    }
+}
