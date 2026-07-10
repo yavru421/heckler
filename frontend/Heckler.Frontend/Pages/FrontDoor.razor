@@ -1,0 +1,23 @@
+@page "/"
+@inject NavigationManager Nav
+
+<div class="heckler-app">
+    <main class="app-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; padding: 2rem 1rem;">
+        <div class="glass-panel fade-in-text" style="max-width: 600px; padding: 3rem; text-align: center; border-color: var(--neon-purple); position: relative; overflow: hidden;">
+            <div class="spotlight" style="background: radial-gradient(circle, rgba(157, 78, 221, 0.15) 0%, transparent 70%);"></div>
+            
+            <div style="font-size: 4rem; margin-bottom: 1rem; position: relative; z-index: 1;">💁‍♀️</div>
+            
+            <div style="position: relative; z-index: 1;">
+                <h1 style="font-size: 2.5rem; margin-bottom: 1rem; letter-spacing: 2px; color: var(--text-primary);">WELCOME TO THE CLUB</h1>
+                <p style="color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem;">
+                    Hey there! I'm the virtual host for the evening. We've got a fantastic lineup for you tonight. Head on into the Showroom—the comedian is just about to take the stage!
+                </p>
+                
+                <button class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/feed")' style="width: 100%; max-width: 300px; display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
+                    <span>ENTER SHOWROOM</span> 🎟️
+                </button>
+            </div>
+        </div>
+    </main>
+</div>

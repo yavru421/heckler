@@ -10,6 +10,7 @@
             <h1>ONLINE COMEDY <span class="neon-text">CLUB</span></h1>
         </div>
         <div style="display: flex; gap: 0.5rem;">
+            <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/foyer")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-red); background: transparent; color: var(--neon-red); font-family: 'Oswald', sans-serif;">🏠 Foyer</button>
             <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/lineups")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">📜 Playlists</button>
             <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/rooms")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-blue); background: transparent; color: var(--neon-blue); font-family: 'Oswald', sans-serif;">👥 Tables</button>
         </div>
@@ -44,14 +45,23 @@
                             🤖 TTS COMEDIAN
                         </div>
                     }
+                    
+                    <div class="visualizer @(isPlaying ? "active" : "")">
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                        <div class="visualizer-bar"></div>
+                    </div>
                 </div>
             }
             else if (aiGenerating)
             {
-                <div style="z-index: 1;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem; animation: spin 2s linear infinite;">💭</div>
-                    <h3 style="color: var(--neon-purple);">AI Comedian is writing new material...</h3>
-                    <p style="color: var(--text-secondary);">Grabbing a fresh pint of beer for the stage</p>
+                <div style="z-index: 1; width: 100%; max-width: 600px;">
+                    <div class="skeleton-box skeleton-title"></div>
+                    <div class="skeleton-box skeleton-text"></div>
+                    <div class="skeleton-box skeleton-text"></div>
+                    <div class="skeleton-box skeleton-text" style="width: 80%; margin: 0 auto;"></div>
                 </div>
             }
             else
@@ -125,9 +135,9 @@
         <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
             <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); margin-bottom: 1rem;">🔊 Crowd Ambient Reactions</h3>
             <div style="display: flex; justify-content: center; gap: 1rem;">
-                <button class="haptic-btn" @onclick='() => TriggerReaction("laugh")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.05); color: var(--neon-green); font-family: 'Oswald', sans-serif; font-size: 1rem;">😂 LAUGH</button>
-                <button class="haptic-btn" @onclick='() => TriggerReaction("clap")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-blue); background: rgba(0,240,255,0.05); color: var(--neon-blue); font-family: 'Oswald', sans-serif; font-size: 1rem;">👏 CLAP</button>
-                <button class="haptic-btn" @onclick='() => TriggerReaction("boo")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.05); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 1rem;">🍅 BOO</button>
+                <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("laugh")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.05); color: var(--neon-green); font-family: 'Oswald', sans-serif; font-size: 1rem;">😂 LAUGH</button>
+                <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("clap")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-blue); background: rgba(0,240,255,0.05); color: var(--neon-blue); font-family: 'Oswald', sans-serif; font-size: 1rem;">👏 CLAP</button>
+                <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("boo")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.05); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 1rem;">🍅 BOO</button>
             </div>
             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.75rem; margin-bottom: 0;">Interact synchronously to trigger local synthesizer sound effects.</p>
         </div>
