@@ -1,3 +1,58 @@
 @inherits LayoutComponentBase
 
-@Body
+<div class="app-wrapper">
+    <header class="app-header">
+        <div class="logo">
+            <h1 class="neon-text fade-in-text">HECKLER</h1>
+            <div class="logo-subtitle">LIVE ONLINE COMEDY CLUB</div>
+        </div>
+        <Heckler.Frontend.Layout.NavMenu />
+    </header>
+
+    <main class="stage-container fade-in-text">
+        <div class="spotlight"></div>
+        <article class="content-body">
+            @Body
+        </article>
+    </main>
+</div>
+
+<style>
+    .app-wrapper {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 3rem;
+        background: rgba(10, 10, 12, 0.85);
+        border-bottom: 1px solid var(--surface-border);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .logo {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .logo-subtitle {
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.75rem;
+        color: var(--neon-purple);
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin-top: -5px;
+    }
+
+    .content-body {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+</style>

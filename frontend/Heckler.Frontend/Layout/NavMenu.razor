@@ -1,30 +1,90 @@
-<div class="nav-menu">
-    <nav style="display: flex; gap: 0.5rem; padding: 0.75rem 1.5rem; background: rgba(10,10,12,0.9); border-bottom: 1px solid var(--surface-border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
-        <NavLink class="nav-link" href="" Match="NavLinkMatch.All" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
-            🏠 Home
+<div class="glass-nav-container">
+    <nav class="premium-nav">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <span class="icon">🏠</span> Home
         </NavLink>
-        <NavLink class="nav-link" href="feed" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
-            📜 Feed
+        <NavLink class="nav-link" href="feed">
+            <span class="icon">📜</span> Showroom
         </NavLink>
-        <NavLink class="nav-link" href="submit" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
-            🎤 Submit
+        <NavLink class="nav-link" href="submit">
+            <span class="icon">🎤</span> Booth
         </NavLink>
-        <NavLink class="nav-link" href="shame" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
-            💀 Shame
+        <NavLink class="nav-link" href="lineups">
+            <span class="icon">📋</span> Lineups
         </NavLink>
-        <NavLink class="nav-link" href="fame" style="color: var(--text-secondary); text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85rem; transition: all 0.2s;">
-            🏆 Fame
+        <NavLink class="nav-link" href="rooms">
+            <span class="icon">🍻</span> Tables
+        </NavLink>
+        <NavLink class="nav-link" href="shame">
+            <span class="icon">💀</span> Shame
         </NavLink>
     </nav>
 </div>
 
 <style>
-    .nav-link:hover, .nav-link.active {
-        color: var(--text-primary) !important;
-        background: rgba(255, 255, 255, 0.08) !important;
+    .glass-nav-container {
+        display: flex;
+        justify-content: center;
+        padding: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: linear-gradient(180deg, rgba(10,10,12,0.95) 0%, rgba(10,10,12,0.8) 50%, rgba(10,10,12,0) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
+    
+    .premium-nav {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 50px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-link {
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 0.6rem 1.25rem;
+        border-radius: 50px;
+        font-family: 'Oswald', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .nav-link .icon {
+        font-size: 1.1rem;
+        filter: grayscale(100%) opacity(0.7);
+        transition: all 0.3s ease;
+    }
+
+    .nav-link:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-2px);
+    }
+
+    .nav-link:hover .icon {
+        filter: grayscale(0%) opacity(1);
+        transform: scale(1.1);
+    }
+
     .nav-link.active {
-        color: var(--neon-red) !important;
-        background: rgba(255, 51, 102, 0.1) !important;
+        color: #fff;
+        background: linear-gradient(135deg, rgba(255, 51, 102, 0.2), rgba(157, 78, 221, 0.2));
+        border: 1px solid rgba(255, 51, 102, 0.3);
+        box-shadow: 0 0 15px rgba(255, 51, 102, 0.15);
+    }
+
+    .nav-link.active .icon {
+        filter: grayscale(0%) opacity(1);
     }
 </style>
