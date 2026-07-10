@@ -15,3 +15,5 @@ database_name = "heckler-ledger"
 database_id = "054a359a-b42f-4156-a6ee-6b7a6e7b848c"
 migrations_dir = "backend/migrations"
 
+[ai]
+binding = "AI"

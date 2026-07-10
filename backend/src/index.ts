@@ -4,7 +4,7 @@ import { cors } from 'hono/cors';
 export interface Env {
   DB: D1Database;
   ASSETS: any;
-  CLOUDFLARE_API_TOKEN?: string; // Optional: for AI Gateway if set, otherwise fallback to local Worker AI
+  AI: any;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -415,27 +415,10 @@ app.post('/api/club/generate-set', async (c) => {
   const { theme } = await c.req.json();
   const targetTheme = theme || 'general life';
 
-  const accountId = '522cbeaaf5c45563fd6134b5af657463';
-  const gatewayId = 'heckler-gateway';
-
-  // We use Cloudflare AI Gateway proxying Workers AI
-  const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/workers-ai/v1/chat/completions`;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
-  };
-
-  // If a token is configured in Env, use it, otherwise use local bindings
-  if (c.env.CLOUDFLARE_API_TOKEN) {
-    headers['Authorization'] = `Bearer ${c.env.CLOUDFLARE_API_TOKEN}`;
-  }
-
   try {
-    const aiResponse = await fetch(gatewayUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: '@cf/meta/llama-3-8b-instruct',
+    const response = await c.env.AI.run(
+      '@cf/meta/llama-3-8b-instruct',
+      {
         messages: [
           {
             role: 'system',
@@ -446,17 +429,17 @@ app.post('/api/club/generate-set', async (c) => {
             content: `Write a stand-up comedy set about: ${targetTheme}`
           }
         ]
-      })
-    });
+      },
+      {
+        gateway: {
+          id: 'heckler-gateway',
+          skipCache: false
+        }
+      }
+    );
 
-    if (aiResponse.ok) {
-      const data: any = await aiResponse.json();
-      const content = data.choices?.[0]?.message?.content || 'Thank you, you have been a great crowd!';
-      return c.json({ content });
-    } else {
-      const errText = await aiResponse.text();
-      throw new Error(`AI Gateway request failed: ${errText}`);
-    }
+    const content = (response as any).response || 'Thank you, you have been a great crowd!';
+    return c.json({ content });
   } catch (e: any) {
     // Local fallback in case token is missing / environment not configured
     return c.json({ 
