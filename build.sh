@@ -20,5 +20,8 @@ rm -rf output
 rm -rf frontend/Heckler.Frontend/bin
 rm -rf frontend/Heckler.Frontend/obj
 
+# Install backend dependencies
+cd backend && npm ci && cd ..
+
 # Publish the application using the local SDK installation without runtime relinking (emcc/wasm-tools)
 ./dotnet/dotnet publish frontend/Heckler.Frontend/Heckler.Frontend.csproj -c Release -o output -p:UsingBrowserRuntimeWorkload=false

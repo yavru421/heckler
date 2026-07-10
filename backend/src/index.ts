@@ -4,6 +4,7 @@ import { isGhosted } from './moderation';
 
 export interface Env {
   DB: D1Database;
+  ASSETS: any;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -202,6 +203,10 @@ app.get('/api/jokes/:id/heckles', async (c) => {
     'SELECT * FROM heckles WHERE joke_id = ? AND is_ghosted = 0 ORDER BY (kills - bombs) DESC'
   ).bind(jokeId).all();
   return c.json(results || []);
+});
+
+app.notFound((c) => {
+  return c.env.ASSETS.fetch(c.req.raw);
 });
 
 export default app;
