@@ -1,0 +1,150 @@
+@page "/lineups"
+@inject HecklerApi Api
+@inject IdentityService Identity
+@inject NavigationManager Nav
+
+<div class="heckler-app">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
+        <div class="logo">
+            <h1>JOKE <span class="neon-text">LINEUPS</span></h1>
+        </div>
+        <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/feed")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">🎤 BACK TO CLUB</button>
+    </header>
+
+    <main class="stage-container" style="max-width: 850px;">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem;">
+            <!-- Left: Lineups List -->
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-top: 0; color: var(--neon-purple); margin-bottom: 1rem;">📜 Active Lineups</h3>
+                
+                @if (lineups.Count == 0)
+                {
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">No lineups compiled yet. Design yours on the right!</p>
+                }
+                else
+                {
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        @foreach (var lineup in lineups)
+                        {
+                            <div style="padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 1rem; color: white;">@lineup.Name</h4>
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Booked by @@@lineup.AuthorName</span>
+                                </div>
+                                <button class="haptic-btn" @onclick="() => ListenToLineup(lineup.Id)" style="padding: 0.4rem 1rem; border-radius: 6px; border: none; background: var(--neon-green); color: black; font-family: 'Oswald', sans-serif; font-size: 0.8rem;">▶ LISTEN</button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Right: Create Lineup -->
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; margin-top: 0; color: var(--neon-red); margin-bottom: 1rem;">🎤 Book a New Lineup</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Lineup Name</label>
+                        <input type="text" @bind="newListName" placeholder="e.g. Saturday Night Roast" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white;" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Your Stage Name</label>
+                        <input type="text" @bind="authorName" placeholder="e.g. ComedyProducer" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white;" />
+                    </div>
+                </div>
+
+                <h4 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Select Jokes to Add:</h4>
+                <div style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; padding-right: 0.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--surface-border); padding-bottom: 1rem;">
+                    @foreach (var joke in availableJokes)
+                    {
+                        var isSelected = selectedJokeIds.Contains(joke.Id);
+                        <div @onclick="() => ToggleJoke(joke.Id)" style="padding: 0.5rem; border-radius: 6px; border: 1px solid @(isSelected ? "var(--neon-red)" : "var(--surface-border)"); background: @(isSelected ? "rgba(255,51,102,0.1)" : "transparent"); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                            <span style="color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">@joke.Text</span>
+                            <span style="font-size: 0.7rem; color: var(--text-secondary);">@@@joke.AuthorName</span>
+                        </div>
+                    }
+                </div>
+
+                <button class="btn-generate haptic-btn" @onclick="CreateLineup" style="width: 100%; padding: 0.8rem; font-size: 1rem;">CREATE LINEUP 📜</button>
+                
+                @if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    <p style="color: var(--neon-red); font-size: 0.8rem; text-align: center; margin-top: 0.5rem;">@errorMsg</p>
+                }
+            </div>
+        </div>
+    </main>
+</div>
+
+@code {
+    private List<LineupModel> lineups = new();
+    private List<JokeModel> availableJokes = new();
+    private List<string> selectedJokeIds = new();
+
+    private string newListName = "";
+    private string authorName = "";
+    private string errorMsg = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        lineups = await Api.GetLineupsAsync();
+        availableJokes = await Api.GetFeedAsync("new", 0);
+        
+        var savedName = await Identity.GetUsernameAsync();
+        if (!string.IsNullOrEmpty(savedName)) authorName = savedName;
+    }
+
+    private void ToggleJoke(string id)
+    {
+        if (selectedJokeIds.Contains(id))
+        {
+            selectedJokeIds.Remove(id);
+        }
+        else
+        {
+            selectedJokeIds.Add(id);
+        }
+    }
+
+    private async Task CreateLineup()
+    {
+        errorMsg = "";
+        if (string.IsNullOrWhiteSpace(newListName))
+        {
+            errorMsg = "Provide a lineup name.";
+            return;
+        }
+        if (selectedJokeIds.Count == 0)
+        {
+            errorMsg = "Select at least 1 joke to build a setlist.";
+            return;
+        }
+
+        var result = await Api.CreateLineupAsync(newListName, authorName, selectedJokeIds);
+        if (result != null)
+        {
+            newListName = "";
+            selectedJokeIds.Clear();
+            lineups = await Api.GetLineupsAsync();
+        }
+        else
+        {
+            errorMsg = "Failed to create lineup.";
+        }
+        StateHasChanged();
+    }
+
+    private async Task ListenToLineup(string lineupId)
+    {
+        var detail = await Api.GetLineupByIdAsync(lineupId);
+        if (detail != null && detail.Jokes.Count > 0)
+        {
+            Nav.NavigateTo("/feed");
+            // Set Feed player to active lineup
+            // We can transfer parameters or use state: but to simplify for Blazor navigation, 
+            // since we have no state manager, we can fetch lineup in Feed page.
+            // Let's redirect to `/feed?lineup={lineupId}` so Feed can load it!
+            Nav.NavigateTo($"/feed?lineup={lineupId}");
+        }
+    }
+}

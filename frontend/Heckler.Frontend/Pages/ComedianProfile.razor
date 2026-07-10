@@ -1,0 +1,122 @@
+@page "/comedian/{Username}"
+@inject HecklerApi Api
+@inject IdentityService Identity
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<div class="heckler-app">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
+        <div class="logo">
+            <h1>COMEDIAN <span class="neon-text">PROFILE</span></h1>
+        </div>
+        <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/feed")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">🎤 CLUB FEED</button>
+    </header>
+
+    <main class="stage-container" style="max-width: 700px;">
+        @if (profile == null)
+        {
+            <div class="glass-panel" style="padding: 3rem; text-align: center;">
+                <p style="color: var(--text-secondary);">Loading profile of @@@Username...</p>
+            </div>
+        }
+        else
+        {
+            <!-- Profile Header -->
+            <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem; border-color: var(--neon-purple);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2 style="font-size: 2rem; margin: 0; color: white;">@@@profile.Username</h2>
+                        <p style="color: var(--text-secondary); margin: 0.5rem 0 1rem 0; font-size: 0.95rem; line-height: 1.5;">@profile.Bio</p>
+                        
+                        <div style="display: flex; gap: 1.5rem; align-items: center; font-size: 0.85rem; color: var(--text-secondary);">
+                            <span>👥 Followers: <strong style="color: var(--neon-purple);">@profile.FollowerCount</strong></span>
+                            <span>🎤 Total Jokes: <strong style="color: var(--neon-blue);">@profile.Jokes.Count</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Follow Button -->
+                    <button class="haptic-btn" @onclick="ToggleFollow" 
+                        style="padding: 0.6rem 1.4rem; border-radius: 20px; border: 1px solid @(isFollowed ? "var(--neon-purple)" : "var(--neon-red)"); background: @(isFollowed ? "rgba(157,78,221,0.15)" : "rgba(255,51,102,0.15)"); color: @(isFollowed ? "var(--neon-purple)" : "var(--neon-red)"); font-family: 'Oswald', sans-serif; font-size: 0.85rem;">
+                        @(isFollowed ? "✓ FOLLOWING" : "➕ FOLLOW COMIC")
+                    </button>
+                </div>
+            </div>
+
+            <!-- Jokes Catalog -->
+            <h3 style="font-size: 1.1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">🎤 Material Catalog</h3>
+            
+            @if (profile.Jokes.Count == 0)
+            {
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">This comic hasn't taken the stage yet.</p>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    @foreach (var joke in profile.Jokes)
+                    {
+                        <div class="glass-panel" style="padding: 1.25rem; background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.04);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.05); padding: 0.2rem 0.5rem; border-radius: 8px;">@joke.Category</span>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">@joke.CreatedAt</span>
+                            </div>
+
+                            <p style="font-size: 1.1rem; line-height: 1.5; color: white; margin: 0.5rem 0 1rem 0;">@joke.Text</p>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                @if (joke.HasAudio)
+                                {
+                                    <button class="haptic-btn" @onclick="() => PlayJokeAudio(joke.Id)" 
+                                        style="padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid var(--neon-green); background: transparent; color: var(--neon-green); font-size: 0.8rem; font-family: 'Oswald', sans-serif;">
+                                        🔊 PLAY RECORDING
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="haptic-btn" @onclick="() => SpeakJokeTts(joke.Text)"
+                                        style="padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid var(--neon-blue); background: transparent; color: var(--neon-blue); font-size: 0.8rem; font-family: 'Oswald', sans-serif;">
+                                        🤖 PLAY TTS COMEDIAN
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </main>
+</div>
+
+@code {
+    [Parameter]
+    public string Username { get; set; } = "";
+
+    private ComedianModel? profile = null;
+    private bool isFollowed = false;
+    private string myUsername = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        myUsername = await Identity.GetUsernameAsync() ?? "AnonymousListener";
+        profile = await Api.GetComedianProfileAsync(Username);
+    }
+
+    private async Task ToggleFollow()
+    {
+        if (profile == null) return;
+        isFollowed = await Api.FollowComedianAsync(Username, myUsername);
+        profile = await Api.GetComedianProfileAsync(Username); // Reload stats
+        StateHasChanged();
+    }
+
+    private async Task PlayJokeAudio(string jokeId)
+    {
+        var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
+        var audioUrl = $"{baseAddr}api/jokes/{jokeId}/audio";
+        await JS.InvokeVoidAsync("audioInterop.playAudioUrl", audioUrl);
+    }
+
+    private async Task SpeakJokeTts(string text)
+    {
+        await JS.InvokeVoidAsync("audioInterop.speakText", text, 1.0f);
+    }
+}

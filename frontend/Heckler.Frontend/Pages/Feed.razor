@@ -1,192 +1,327 @@
 @page "/feed"
 @inject HecklerApi Api
 @inject IdentityService Identity
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <div class="heckler-app">
     <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 1.5rem; border-top: none;">
         <div class="logo">
-            <h1>THE <span class="neon-text">FEED</span></h1>
+            <h1>ONLINE COMEDY <span class="neon-text">CLUB</span></h1>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/lineups")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">📜 Playlists</button>
+            <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/rooms")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-blue); background: transparent; color: var(--neon-blue); font-family: 'Oswald', sans-serif;">👥 Tables</button>
         </div>
     </header>
 
-    <main class="stage-container">
-        <!-- Sort Tabs -->
-        <div id="sort-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
-            @foreach (var tab in sortTabs)
+    <main class="stage-container" style="max-width: 800px;">
+        <!-- Showroom Stage Spotlight Area -->
+        <div class="glass-panel fade-in-text" style="position: relative; overflow: hidden; padding: 3rem 2rem; text-align: center; border-color: var(--neon-purple); min-height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 2rem;">
+            <div class="spotlight" style="background: radial-gradient(circle, @(isPlaying ? "rgba(157, 78, 221, 0.22)" : "rgba(255, 51, 102, 0.05)") 0%, transparent 70%);"></div>
+
+            @if (activeJoke != null)
             {
-                var isActive = activeSort == tab.Key;
-                <button id="sort-@tab.Key" class="haptic-btn" @onclick="() => ChangeSort(tab.Key)"
-                    style="padding: 0.6rem 1.2rem; border-radius: 20px; border: 1px solid @(isActive ? "var(--neon-red)" : "var(--surface-border)"); background: @(isActive ? "rgba(255,51,102,0.15)" : "transparent"); color: @(isActive ? "var(--neon-red)" : "var(--text-secondary)"); font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
-                    @tab.Value
-                </button>
+                <div style="z-index: 1;">
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <span @onclick="GoToComedian" style="color: var(--neon-purple); font-weight: 700; font-size: 1.1rem; cursor: pointer; text-decoration: underline;">@@@activeJoke.AuthorName</span>
+                        <span style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.05); padding: 0.2rem 0.6rem; border-radius: 10px;">@activeJoke.Category</span>
+                    </div>
+
+                    <p style="font-size: 1.6rem; line-height: 1.5; color: var(--text-primary); font-weight: 300; max-width: 600px; margin: 1.5rem auto;">
+                        @activeJoke.Text
+                    </p>
+
+                    @if (activeJoke.HasAudio)
+                    {
+                        <div style="color: var(--neon-green); font-size: 0.8rem; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 1rem;">
+                            🎙️ REAL VOICE RECORDING
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="color: var(--neon-blue); font-size: 0.8rem; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 1rem;">
+                            🤖 TTS COMEDIAN
+                        </div>
+                    }
+                </div>
+            }
+            else if (aiGenerating)
+            {
+                <div style="z-index: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem; animation: spin 2s linear infinite;">💭</div>
+                    <h3 style="color: var(--neon-purple);">AI Comedian is writing new material...</h3>
+                    <p style="color: var(--text-secondary);">Grabbing a fresh pint of beer for the stage</p>
+                </div>
+            }
+            else
+            {
+                <div style="z-index: 1;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎤</div>
+                    <h2 style="margin-bottom: 0.5rem;">Take a Seat</h2>
+                    <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto 1.5rem auto;">Select a set list or ask the AI house comedian to write custom jokes to start the show.</p>
+                </div>
             }
         </div>
 
-        <!-- Joke Feed -->
-        @if (isLoading && jokes.Count == 0)
-        {
-            <div class="glass-panel fade-in-text" style="padding: 4rem; text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem; animation: bounce 2s infinite;">🎙️</div>
-                <p style="color: var(--text-secondary); font-size: 1.1rem;">Loading the feed...</p>
-            </div>
-        }
-        else if (jokes.Count == 0)
-        {
-            <div class="glass-panel fade-in-text" style="padding: 4rem; text-align: center;">
-                <p style="color: var(--text-secondary); font-size: 1.1rem;">No jokes yet. Be the first to take the stage!</p>
-                <button id="btn-submit-first" class="btn-generate haptic-btn" style="margin-top: 1.5rem;" @onclick='() => Nav.NavigateTo("/submit")'>
-                    🎤 Submit a Joke
-                </button>
-            </div>
-        }
-        else
-        {
-            @foreach (var joke in jokes)
-            {
-                <div class="glass-panel fade-in-text" style="padding: 1.5rem; margin-bottom: 1rem; border-color: rgba(255,255,255,0.06);" id="joke-@joke.Id">
-                    <!-- Author + Category -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <span style="color: var(--neon-purple); font-weight: 600; font-size: 0.9rem;">@@@joke.AuthorName</span>
-                        <span style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.05); padding: 0.25rem 0.6rem; border-radius: 10px;">@joke.Category</span>
-                    </div>
-
-                    <!-- Joke Text -->
-                    <p style="font-size: 1.15rem; line-height: 1.6; margin-bottom: 1.25rem; color: var(--text-primary); font-weight: 300;">@joke.Text</p>
-
-                    <!-- Vote Buttons -->
-                    <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem;">
-                        <button id="kill-@joke.Id" class="haptic-btn" @onclick="() => RateJoke(joke, true)"
-                            style="padding: 0.5rem 1.2rem; border-radius: 8px; border: 1px solid var(--neon-green); background: @(votedJokes.ContainsKey(joke.Id) && votedJokes[joke.Id] == "kill" ? "rgba(0,255,136,0.2)" : "transparent"); color: var(--neon-green); font-family: 'Oswald', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                            🔥 KILL (@joke.Kills)
-                        </button>
-                        <button id="bomb-@joke.Id" class="haptic-btn" @onclick="() => RateJoke(joke, false)"
-                            style="padding: 0.5rem 1.2rem; border-radius: 8px; border: 1px solid var(--neon-red); background: @(votedJokes.ContainsKey(joke.Id) && votedJokes[joke.Id] == "bomb" ? "rgba(255,51,102,0.2)" : "transparent"); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
-                            🍅 BOMB (@joke.Bombs)
-                        </button>
-                    </div>
-
-                    <!-- Top Heckle -->
-                    @if (joke.TopHeckle != null)
-                    {
-                        <div style="padding: 0.75rem 1rem; background: rgba(0,255,136,0.05); border-left: 3px solid var(--neon-green); border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
-                            <div style="font-size: 0.75rem; color: var(--neon-green); margin-bottom: 0.3rem; font-weight: 600;">💬 TOP HECKLE by @@@joke.TopHeckle.AuthorName</div>
-                            <p style="font-size: 0.95rem; color: var(--text-primary); margin: 0; font-style: italic;">"@joke.TopHeckle.Text"</p>
-                            <div style="margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-secondary);">🔥 @joke.TopHeckle.Kills  🍅 @joke.TopHeckle.Bombs</div>
-                        </div>
-                    }
-
-                    <!-- Heckle Input -->
+        <!-- Main Showroom Dashboard -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Left: Player Control Panel -->
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">🎛️ Stage Controls</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Play / Pause / Skip -->
                     <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="heckle-input-@joke.Id" @bind="heckleTexts[joke.Id]" placeholder="Write a heckle..." 
-                            style="flex: 1; padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.4); color: white; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s;"
-                            @onfocus="@(() => {})" />
-                        <button id="heckle-btn-@joke.Id" class="haptic-btn" @onclick="() => SubmitHeckle(joke.Id)"
-                            style="padding: 0.6rem 1rem; border-radius: 8px; border: none; background: var(--neon-red); color: white; font-family: 'Oswald', sans-serif; font-size: 0.8rem; cursor: pointer; white-space: nowrap;">
-                            HECKLE 🍅
-                        </button>
+                        @if (isPlaying)
+                        {
+                            <button class="haptic-btn" @onclick="PauseSet" style="flex: 1; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.15); color: var(--neon-red); font-family: 'Oswald', sans-serif;">⏸️ PAUSE</button>
+                        }
+                        else
+                        {
+                            <button class="haptic-btn" @onclick="PlaySet" disabled="@(jokeQueue.Count == 0 && string.IsNullOrEmpty(aiSetText))" style="flex: 1; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.15); color: var(--neon-green); font-family: 'Oswald', sans-serif;">▶️ PLAY SET</button>
+                        }
+                        <button class="haptic-btn" @onclick="NextJoke" disabled="@(jokeQueue.Count <= 1 && string.IsNullOrEmpty(aiSetText))" style="padding: 0.8rem 1.2rem; border-radius: 8px; border: 1px solid var(--surface-border); background: transparent; color: white;">⏭️</button>
+                    </div>
+
+                    <!-- TTS Speed Control -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                            <span>Delivery Pace (Speed)</span>
+                            <span>@deliveryRate.ToString("F1")x</span>
+                        </div>
+                        <input type="range" min="0.6" max="1.6" step="0.1" @bind="deliveryRate" style="width: 100%; accent-color: var(--neon-purple);" />
+                    </div>
+
+                    <!-- Queue Status -->
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.3); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--surface-border);">
+                        📍 Currently: <strong>@(activeJokeIndex + 1) / @jokeQueue.Count</strong> in lineup
                     </div>
                 </div>
-            }
+            </div>
 
-            @if (!isLoading && jokes.Count >= 20)
-            {
-                <button id="btn-load-more" class="btn-generate haptic-btn" @onclick="LoadMore" style="width: 100%; margin-top: 1rem; padding: 1rem;">
-                    Load More
-                </button>
-            }
-        }
+            <!-- Right: Select Set / Book Show -->
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">🎭 Book a Show</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Dynamic DB Sets -->
+                    <button class="haptic-btn" @onclick='() => LoadCategorySet("observational")' style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(255,255,255,0.03); color: white; text-align: left; font-size: 0.9rem;">👀 Observational Set (From DB)</button>
+                    <button class="haptic-btn" @onclick='() => LoadCategorySet("dark")' style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(255,255,255,0.03); color: white; text-align: left; font-size: 0.9rem;">🌑 Dark Comedy Set (From DB)</button>
+                    
+                    <!-- AI Comedian Setup -->
+                    <div style="border-top: 1px solid var(--surface-border); padding-top: 0.75rem; margin-top: 0.25rem;">
+                        <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">AI Comedian Prompt</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" @bind="aiTheme" placeholder="e.g. airport security" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem;" />
+                            <button class="haptic-btn" @onclick="GenerateAiSet" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: var(--neon-purple); color: white; font-family: 'Oswald', sans-serif; font-size: 0.8rem; white-space: nowrap;">GENERATE 🤖</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crowd Soundboard Interaction (Replaced Kills/Bombs Buttons) -->
+        <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+            <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); margin-bottom: 1rem;">🔊 Crowd Ambient Reactions</h3>
+            <div style="display: flex; justify-content: center; gap: 1rem;">
+                <button class="haptic-btn" @onclick='() => TriggerReaction("laugh")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.05); color: var(--neon-green); font-family: 'Oswald', sans-serif; font-size: 1rem;">😂 LAUGH</button>
+                <button class="haptic-btn" @onclick='() => TriggerReaction("clap")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-blue); background: rgba(0,240,255,0.05); color: var(--neon-blue); font-family: 'Oswald', sans-serif; font-size: 1rem;">👏 CLAP</button>
+                <button class="haptic-btn" @onclick='() => TriggerReaction("boo")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.05); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 1rem;">🍅 BOO</button>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.75rem; margin-bottom: 0;">Interact synchronously to trigger local synthesizer sound effects.</p>
+        </div>
     </main>
 </div>
 
-@inject NavigationManager Nav
-
 @code {
-    private List<JokeModel> jokes = new();
-    private Dictionary<string, string> heckleTexts = new();
-    private Dictionary<string, string> votedJokes = new();
-    private string activeSort = "hot";
-    private int currentPage = 0;
-    private bool isLoading = false;
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "lineup")]
+    public string? LineupQueryId { get; set; }
 
-    private Dictionary<string, string> sortTabs = new()
-    {
-        { "hot", "🔥 Hot" },
-        { "new", "🆕 New" },
-        { "controversial", "💀 Controversial" },
-        { "bombing", "🍅 Bombing" }
-    };
+    private List<JokeModel> jokeQueue = new();
+    private JokeModel? activeJoke = null;
+    private int activeJokeIndex = 0;
+    private bool isPlaying = false;
+    private float deliveryRate = 1.0f;
+    private string aiTheme = "";
+    private bool aiGenerating = false;
+    private string aiSetText = "";
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        await LoadJokes();
-    }
-
-    private async Task LoadJokes()
-    {
-        isLoading = true;
-        StateHasChanged();
-        var results = await Api.GetFeedAsync(activeSort, currentPage);
-        jokes = results;
-        foreach (var j in jokes)
+        if (!string.IsNullOrEmpty(LineupQueryId))
         {
-            if (!heckleTexts.ContainsKey(j.Id)) heckleTexts[j.Id] = "";
-        }
-        isLoading = false;
-        StateHasChanged();
-    }
-
-    private async Task ChangeSort(string sort)
-    {
-        activeSort = sort;
-        currentPage = 0;
-        await LoadJokes();
-    }
-
-    private async Task LoadMore()
-    {
-        currentPage++;
-        isLoading = true;
-        StateHasChanged();
-        var moreJokes = await Api.GetFeedAsync(activeSort, currentPage);
-        foreach (var j in moreJokes)
-        {
-            if (!heckleTexts.ContainsKey(j.Id)) heckleTexts[j.Id] = "";
-        }
-        jokes.AddRange(moreJokes);
-        isLoading = false;
-        StateHasChanged();
-    }
-
-    private void RateJoke(JokeModel joke, bool isKill)
-    {
-        if (votedJokes.ContainsKey(joke.Id)) return;
-        
-        // Optimistic UI
-        if (isKill) joke.Kills++;
-        else joke.Bombs++;
-        votedJokes[joke.Id] = isKill ? "kill" : "bomb";
-        StateHasChanged();
-
-        // Fire and forget
-        _ = Api.RateJokeAsync(joke.Id, isKill ? "kill" : "bomb");
-    }
-
-    private async Task SubmitHeckle(string jokeId)
-    {
-        if (!heckleTexts.ContainsKey(jokeId) || string.IsNullOrWhiteSpace(heckleTexts[jokeId])) return;
-
-        var username = await Identity.GetUsernameAsync() ?? "Anonymous";
-        var heckle = await Api.HeckleJokeAsync(jokeId, heckleTexts[jokeId], username);
-        heckleTexts[jokeId] = "";
-        
-        if (heckle != null)
-        {
-            var joke = jokes.FirstOrDefault(j => j.Id == jokeId);
-            if (joke != null && joke.TopHeckle == null)
+            var detail = await Api.GetLineupByIdAsync(LineupQueryId);
+            if (detail != null && detail.Jokes.Count > 0)
             {
-                joke.TopHeckle = heckle;
+                jokeQueue = detail.Jokes;
+                activeJokeIndex = 0;
+                activeJoke = jokeQueue[0];
+                StateHasChanged();
+                return;
+            }
+        }
+        await LoadCategorySet("observational");
+    }
+
+    private async Task LoadCategorySet(string category)
+    {
+        await CancelPlayback();
+        aiSetText = "";
+        
+        var allJokes = await Api.GetFeedAsync("new", 0);
+        jokeQueue = allJokes.Where(j => j.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
+        
+        activeJokeIndex = 0;
+        if (jokeQueue.Count > 0)
+        {
+            activeJoke = jokeQueue[0];
+        }
+        else
+        {
+            activeJoke = null;
+        }
+        StateHasChanged();
+    }
+
+    public async Task LoadLineupSet(List<JokeModel> jokes)
+    {
+        await CancelPlayback();
+        aiSetText = "";
+        
+        jokeQueue = jokes;
+        activeJokeIndex = 0;
+        if (jokeQueue.Count > 0)
+        {
+            activeJoke = jokeQueue[0];
+        }
+        else
+        {
+            activeJoke = null;
+        }
+        StateHasChanged();
+        await PlaySet();
+    }
+
+    private async Task PlaySet()
+    {
+        if (activeJoke == null && string.IsNullOrEmpty(aiSetText)) return;
+        isPlaying = true;
+        StateHasChanged();
+
+        if (!string.IsNullOrEmpty(aiSetText))
+        {
+            // Playing the AI set
+            await JS.InvokeVoidAsync("audioInterop.speakText", aiSetText, deliveryRate);
+            isPlaying = false;
+            aiSetText = "";
+            activeJoke = null;
+            StateHasChanged();
+            return;
+        }
+
+        // Loop through queue
+        while (isPlaying && activeJokeIndex < jokeQueue.Count)
+        {
+            activeJoke = jokeQueue[activeJokeIndex];
+            StateHasChanged();
+
+            if (activeJoke.HasAudio)
+            {
+                // Play recorded audio
+                var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
+                var audioUrl = $"{baseAddr}api/jokes/{activeJoke.Id}/audio";
+                await JS.InvokeVoidAsync("audioInterop.playAudioUrl", audioUrl);
+            }
+            else
+            {
+                // Play TTS
+                await JS.InvokeVoidAsync("audioInterop.speakText", activeJoke.Text, deliveryRate);
+            }
+
+            if (!isPlaying) break;
+
+            activeJokeIndex++;
+            if (activeJokeIndex >= jokeQueue.Count)
+            {
+                isPlaying = false;
+                activeJoke = null;
+                break;
             }
         }
         StateHasChanged();
+    }
+
+    private async Task PauseSet()
+    {
+        isPlaying = false;
+        await JS.InvokeVoidAsync("audioInterop.cancelSpeech");
+        StateHasChanged();
+    }
+
+    private async Task CancelPlayback()
+    {
+        isPlaying = false;
+        await JS.InvokeVoidAsync("audioInterop.cancelSpeech");
+    }
+
+    private async Task NextJoke()
+    {
+        if (!string.IsNullOrEmpty(aiSetText))
+        {
+            await CancelPlayback();
+            aiSetText = "";
+            activeJoke = null;
+            StateHasChanged();
+            return;
+        }
+
+        await CancelPlayback();
+        if (activeJokeIndex < jokeQueue.Count - 1)
+        {
+            activeJokeIndex++;
+            activeJoke = jokeQueue[activeJokeIndex];
+            StateHasChanged();
+            await PlaySet();
+        }
+    }
+
+    private async Task GenerateAiSet()
+    {
+        if (string.IsNullOrWhiteSpace(aiTheme)) return;
+        
+        await CancelPlayback();
+        activeJoke = null;
+        aiGenerating = true;
+        StateHasChanged();
+
+        aiSetText = await Api.GenerateAiSetAsync(aiTheme);
+        aiGenerating = false;
+        
+        // Setup AI Joke display
+        activeJoke = new JokeModel
+        {
+            AuthorName = "AIHouseComedian",
+            Category = "AI Standup",
+            Text = aiSetText.Replace("[PAUSE]", " ... ")
+        };
+
+        StateHasChanged();
+        await PlaySet();
+    }
+
+    private void TriggerReaction(string type)
+    {
+        _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", type);
+    }
+
+    private void GoToComedian()
+    {
+        if (activeJoke != null && !activeJoke.AuthorName.Equals("AIHouseComedian"))
+        {
+            _ = CancelPlayback();
+            Nav.NavigateTo($"/comedian/{activeJoke.AuthorName}");
+        }
     }
 }

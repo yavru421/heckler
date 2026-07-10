@@ -1,0 +1,224 @@
+@page "/rooms"
+@inject HecklerApi Api
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="heckler-app">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
+        <div class="logo">
+            <h1>CO-LISTENING <span class="neon-text">TABLES</span></h1>
+        </div>
+        <button class="haptic-btn" @onclick="LeaveRoom" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">🎤 CLUB STAGE</button>
+    </header>
+
+    <main class="stage-container" style="max-width: 800px;">
+        @if (activeRoom == null)
+        {
+            <!-- Rooms Directory -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="glass-panel" style="padding: 1.5rem;">
+                    <h3 style="font-size: 1.1rem; margin-top: 0; color: var(--neon-blue); margin-bottom: 1rem;">👥 Virtual Tables</h3>
+                    @if (rooms.Count == 0)
+                    {
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">No tables active. Start one on the right!</p>
+                    }
+                    else
+                    {
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            @foreach (var room in rooms)
+                            {
+                                <div style="padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 1rem; color: white;">@room.Name</h4>
+                                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Table #@room.Id.Substring(0, 4)</span>
+                                    </div>
+                                    <button class="haptic-btn" @onclick="() => JoinRoom(room)" style="padding: 0.4rem 1rem; border-radius: 6px; border: none; background: var(--neon-blue); color: black; font-family: 'Oswald', sans-serif; font-size: 0.8rem;">JOIN TABLE</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="glass-panel" style="padding: 1.5rem;">
+                    <h3 style="font-size: 1.1rem; margin-top: 0; color: var(--neon-purple); margin-bottom: 1rem;">🎤 Claim a Table</h3>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Table Name</label>
+                            <input type="text" @bind="newRoomName" placeholder="e.g. Developer Corner" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white;" />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Set List (Lineup)</label>
+                            <select @bind="selectedLineupId" style="width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white;">
+                                <option value="">-- Choose a Lineup (Playlist) --</option>
+                                @foreach (var l in lineups)
+                                {
+                                    <option value="@l.Id">@l.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <button class="btn-generate haptic-btn" @onclick="CreateRoom" style="width: 100%; padding: 0.8rem; font-size: 1rem;">CREATE TABLE 👥</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Active Room Area -->
+            <div class="glass-panel" style="padding: 2rem; text-align: center; border-color: var(--neon-blue); position: relative; overflow: hidden; margin-bottom: 1.5rem;">
+                <div class="spotlight" style="background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, transparent 70%);"></div>
+
+                <div style="z-index: 1; position: relative;">
+                    <span style="color: var(--neon-blue); font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;">YOU ARE AT TABLE</span>
+                    <h2 style="font-size: 2.2rem; margin: 0.5rem 0 1.5rem 0; letter-spacing: 2px;">@activeRoom.Name</h2>
+
+                    @if (activeLineup != null && activeLineup.Jokes.Count > activeJokeIndex)
+                    {
+                        var joke = activeLineup.Jokes[activeJokeIndex];
+                        <div style="background: rgba(0,0,0,0.4); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--surface-border); max-width: 550px; margin: 0 auto 1.5rem auto;">
+                            <span style="color: var(--neon-purple); font-weight: 600; font-size: 0.9rem;">@@@joke.AuthorName</span>
+                            <p style="font-size: 1.25rem; line-height: 1.6; margin: 1rem 0; color: white;">@joke.Text</p>
+                        </div>
+
+                        <div style="display: flex; justify-content: center; gap: 0.5rem; align-items: center; font-size: 0.9rem; color: var(--text-secondary);">
+                            <span>Joke <strong>@(activeJokeIndex + 1)</strong> of <strong>@activeLineup.Jokes.Count</strong></span>
+                            <button class="haptic-btn" @onclick="NextTrack" style="margin-left: 1rem; padding: 0.3rem 0.8rem; border-radius: 4px; border: 1px solid var(--surface-border); background: transparent; color: white; font-size: 0.75rem;">Next ⏭️</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">The show has finished or no lineup is loaded. Click below to return to the catalog.</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Co-listening Live Soundboard / Reactions -->
+            <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
+                <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); margin-bottom: 1rem;">🔊 Synchronized Reaction Soundboard</h3>
+                <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+                    <button class="haptic-btn" @onclick='() => React("laugh")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.05); color: var(--neon-green); font-family: 'Oswald', sans-serif;">😂 LAUGH</button>
+                    <button class="haptic-btn" @onclick='() => React("clap")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-blue); background: rgba(0,240,255,0.05); color: var(--neon-blue); font-family: 'Oswald', sans-serif;">👏 CLAP</button>
+                    <button class="haptic-btn" @onclick='() => React("boo")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.05); color: var(--neon-red); font-family: 'Oswald', sans-serif;">🍅 BOO</button>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0;">Reactions are broadcast to everyone at the table and generate real-time synth sounds.</p>
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private List<RoomModel> rooms = new();
+    private List<LineupModel> lineups = new();
+    private RoomModel? activeRoom = null;
+    private LineupModel? activeLineup = null;
+
+    private string newRoomName = "";
+    private string selectedLineupId = "";
+    
+    private int activeJokeIndex = 0;
+    private bool isPolling = false;
+    private List<string> localPlayedReactions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        rooms = await Api.GetRoomsAsync();
+        lineups = await Api.GetLineupsAsync();
+    }
+
+    private async Task CreateRoom()
+    {
+        if (string.IsNullOrWhiteSpace(newRoomName)) return;
+        var r = await Api.CreateRoomAsync(newRoomName, string.IsNullOrEmpty(selectedLineupId) ? null : selectedLineupId);
+        if (r != null)
+        {
+            newRoomName = "";
+            rooms = await Api.GetRoomsAsync();
+            await JoinRoom(r);
+        }
+    }
+
+    private async Task JoinRoom(RoomModel room)
+    {
+        activeRoom = room;
+        activeJokeIndex = room.CurrentJokeIndex;
+        if (!string.IsNullOrEmpty(room.CurrentLineupId))
+        {
+            activeLineup = await Api.GetLineupByIdAsync(room.CurrentLineupId);
+        }
+        
+        localPlayedReactions.Clear();
+        isPolling = true;
+        _ = StartPollingLoop();
+        
+        StateHasChanged();
+    }
+
+    private async Task StartPollingLoop()
+    {
+        while (isPolling && activeRoom != null)
+        {
+            try
+            {
+                var polled = await Api.PollRoomAsync(activeRoom.Id);
+                if (polled != null)
+                {
+                    // Check index changes
+                    if (polled.CurrentJokeIndex != activeJokeIndex)
+                    {
+                        activeJokeIndex = polled.CurrentJokeIndex;
+                        StateHasChanged();
+                    }
+
+                    // Check reactions and trigger synth sounds locally
+                    foreach (var reaction in polled.Reactions)
+                    {
+                        // We play it locally
+                        _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", reaction);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Polling error: " + ex.Message);
+            }
+
+            await Task.Delay(1500); // Poll every 1.5s
+        }
+    }
+
+    private async Task NextTrack()
+    {
+        if (activeRoom == null || activeLineup == null) return;
+        
+        int nextIndex = activeJokeIndex + 1;
+        if (nextIndex >= activeLineup.Jokes.Count)
+        {
+            nextIndex = 0; // Loop back
+        }
+
+        activeJokeIndex = nextIndex;
+        await Api.NextRoomTrackAsync(activeRoom.Id, nextIndex);
+        StateHasChanged();
+    }
+
+    private async Task React(string type)
+    {
+        if (activeRoom == null) return;
+        await Api.ReactRoomAsync(activeRoom.Id, type);
+        // Play locally immediately
+        _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", type);
+    }
+
+    private void LeaveRoom()
+    {
+        isPolling = false;
+        activeRoom = null;
+        activeLineup = null;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        isPolling = false;
+    }
+}
