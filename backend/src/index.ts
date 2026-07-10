@@ -25,21 +25,34 @@ async function getFingerprint(request: Request): Promise<string> {
 app.get('/api/jokes', async (c) => {
   const sort = c.req.query('sort') || 'hot';
   const page = parseInt(c.req.query('page') || '0');
+  const category = c.req.query('category');
   const limit = 20;
   const offset = page * limit;
 
-  let query = '';
+  let query = 'SELECT * FROM jokes WHERE is_ghosted = 0';
+  const params: any[] = [];
+  
+  if (category) {
+    query += ' AND category = ?';
+    params.push(category);
+  }
+
   switch (sort) {
     case 'new':
-      query = `SELECT * FROM jokes WHERE is_ghosted = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+      query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+      break;
+    case 'random':
+      query += ' ORDER BY RANDOM() LIMIT ? OFFSET ?';
       break;
     case 'hot':
     default:
-      query = `SELECT * FROM jokes WHERE is_ghosted = 0 ORDER BY (kills - bombs) DESC, created_at DESC LIMIT ? OFFSET ?`;
+      query += ' ORDER BY (kills - bombs) DESC, created_at DESC LIMIT ? OFFSET ?';
       break;
   }
 
-  const { results: jokes } = await c.env.DB.prepare(query).bind(limit, offset).all();
+  params.push(limit, offset);
+
+  const { results: jokes } = await c.env.DB.prepare(query).bind(...params).all();
 
   const jokesWithHeckles = await Promise.all(
     (jokes || []).map(async (joke: any) => {

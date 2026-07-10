@@ -180,8 +180,7 @@
         await CancelPlayback();
         aiSetText = "";
         
-        var allJokes = await Api.GetFeedAsync("new", 0);
-        jokeQueue = allJokes.Where(j => j.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
+        jokeQueue = await Api.GetFeedAsync("random", 0, category);
         
         activeJokeIndex = 0;
         if (jokeQueue.Count > 0)

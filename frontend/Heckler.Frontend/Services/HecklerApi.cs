@@ -12,11 +12,14 @@ namespace Heckler.Frontend.Services
             _http = http;
         }
 
-        public async Task<List<JokeModel>> GetFeedAsync(string sort = "hot", int page = 0)
+        public async Task<List<JokeModel>> GetFeedAsync(string sort = "hot", int page = 0, string? category = null)
         {
             try
             {
-                var response = await _http.GetFromJsonAsync<List<JokeModel>>($"api/jokes?sort={sort}&page={page}");
+                var url = $"api/jokes?sort={sort}&page={page}";
+                if (!string.IsNullOrEmpty(category)) url += $"&category={Uri.EscapeDataString(category)}";
+                
+                var response = await _http.GetFromJsonAsync<List<JokeModel>>(url);
                 return response ?? new List<JokeModel>();
             }
             catch (Exception ex)
