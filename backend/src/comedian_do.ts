@@ -80,16 +80,23 @@ Do NOT include any introduction, greetings, stage directions, or metadata. Outpu
     const jokeText = aiResponse.response || "My smart fridge just sent me a weekly screen time report. [PAUSE] Apparently, I spent 12 hours looking at cheese.";
     const jokeId = crypto.randomUUID();
 
-    // 2. Synthesize speech via MeloTTS
+    // 2. Synthesize speech via Deepgram Aura-1
     let audioBuffer: ArrayBuffer | null = null;
     try {
-      const ttsResponse = await this.env.AI.run("@cf/myshell-ai/melotts", {
-        text: jokeText
+      const speakers = ["angus", "asteria", "arcas", "orion", "orpheus", "athena", "luna", "zeus", "perseus", "helios", "hera", "stella"];
+      let hash = 0;
+      for (let i = 0; i < username.length; i++) {
+        hash = username.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const speaker = speakers[Math.abs(hash) % speakers.length];
+
+      const ttsResponse = await this.env.AI.run("@cf/deepgram/aura-1", {
+        text: jokeText,
+        speaker: speaker
       });
-      // The output from MeloTTS is audio/wav binary
       audioBuffer = await ttsResponse.arrayBuffer();
     } catch (e) {
-      console.error("MeloTTS synthesis failed:", e);
+      console.error("Deepgram Aura-1 synthesis failed:", e);
     }
 
     // 3. Lazy insert comedian profile if it does not exist in D1
