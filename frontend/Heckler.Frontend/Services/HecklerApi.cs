@@ -201,5 +201,49 @@ namespace Heckler.Frontend.Services
             }
             return "The mic is dead tonight...";
         }
+
+        // --- AUDIENCE FEEDBACK CHAT ---
+        public async Task<List<ChatMessageModel>> GetChatMessagesAsync()
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<List<ChatMessageModel>>("api/chat");
+                return response ?? new List<ChatMessageModel>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching chat: {ex.Message}");
+                return new List<ChatMessageModel>();
+            }
+        }
+
+        public async Task<bool> SendChatMessageAsync(string username, string message)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/chat", new { username, message });
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending chat: {ex.Message}");
+                return false;
+            }
+        }
+
+        // --- COMEDIAN DO TRIGGER ---
+        public async Task<bool> TriggerComedianAsync(string username)
+        {
+            try
+            {
+                var response = await _http.PostAsync($"api/comedians/{username}/trigger", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error triggering comedian: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

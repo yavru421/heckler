@@ -1,8 +1,10 @@
 @page "/feed"
+@implements IDisposable
 @inject HecklerApi Api
 @inject IdentityService Identity
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+
 
 <div class="heckler-app">
     <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 1.5rem; border-top: none;">
@@ -140,6 +142,35 @@
                 <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("boo")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.05); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 1rem;">🍅 BOO</button>
             </div>
             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.75rem; margin-bottom: 0;">Interact synchronously to trigger local synthesizer sound effects.</p>
+        </div>
+
+        <!-- Audience Chat Section -->
+        <div class="glass-panel" style="padding: 1.5rem; margin-top: 2rem;">
+            <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">💬 Audience Chat Feedback</h3>
+            
+            <div style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; text-align: left; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                @if (chatMessages.Count == 0)
+                {
+                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0; text-align: center;">No chatter in the club yet. Start the banter!</p>
+                }
+                else
+                {
+                    @foreach (var msg in chatMessages)
+                    {
+                        <div style="font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">
+                            <strong style="color: var(--neon-blue);">@msg.Username</strong>: 
+                            <span style="color: var(--text-primary);">@msg.Message</span>
+                            <span style="font-size: 0.7rem; color: var(--text-secondary); float: right;">@msg.CreatedAt.ToLocalTime().ToString("t")</span>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="text" @bind="chatUsername" placeholder="Nickname..." style="width: 120px; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem;" />
+                <input type="text" @bind="newChatMessage" @onkeyup="HandleChatKey" placeholder="Type feedback banter..." style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem;" />
+                <button class="haptic-btn" @onclick="SendChat" style="padding: 0.5rem 1.2rem; border-radius: 6px; border: none; background: var(--neon-blue); color: white; font-family: 'Oswald', sans-serif; font-size: 0.85rem;">SEND 📣</button>
+            </div>
         </div>
     </main>
 </div>
@@ -332,5 +363,54 @@
             _ = CancelPlayback();
             Nav.NavigateTo($"/comedian/{activeJoke.AuthorName}");
         }
+    }
+
+    private List<ChatMessageModel> chatMessages = new();
+    private string chatUsername = "AudienceMember";
+    private string newChatMessage = "";
+    private System.Threading.Timer? chatPollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var storedUsername = await Identity.GetUsernameAsync();
+        if (!string.IsNullOrEmpty(storedUsername))
+        {
+            chatUsername = storedUsername;
+        }
+
+
+        chatPollTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                chatMessages = await Api.GetChatMessagesAsync();
+                StateHasChanged();
+            });
+        }, null, 0, 5000);
+    }
+
+    private async Task SendChat()
+    {
+        if (string.IsNullOrWhiteSpace(newChatMessage)) return;
+        var sent = await Api.SendChatMessageAsync(chatUsername, newChatMessage);
+        if (sent)
+        {
+            newChatMessage = "";
+            chatMessages = await Api.GetChatMessagesAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleChatKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendChat();
+        }
+    }
+
+    public void Dispose()
+    {
+        chatPollTimer?.Dispose();
     }
 }

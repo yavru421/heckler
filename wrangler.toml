@@ -17,3 +17,12 @@ migrations_dir = "backend/migrations"
 
 [ai]
 binding = "AI"
+
+[[durable_objects.bindings]]
+name = "COMEDIAN_DO"
+class_name = "ComedianDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ComedianDO"]
+

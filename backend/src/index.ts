@@ -5,7 +5,11 @@ export interface Env {
   DB: D1Database;
   ASSETS: any;
   AI: any;
+  COMEDIAN_DO: DurableObjectNamespace;
 }
+
+export { ComedianDO } from './comedian_do';
+
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -459,6 +463,48 @@ app.post('/api/club/generate-set', async (c) => {
       content: `I wanted to make a joke about ${targetTheme}, but the microphone cut out! [PAUSE] Let's just say it's too funny to print. [PAUSE] Thank you, you have been a great crowd!`
     });
   }
+});
+
+// 11. AUDIENCE FEEDBACK CHAT
+app.get('/api/chat', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT * FROM audience_chat ORDER BY created_at DESC LIMIT 50'
+  ).all();
+  return c.json(results || []);
+});
+
+app.post('/api/chat', async (c) => {
+  const { username, message } = await c.req.json();
+  if (!username || !message) {
+    return c.json({ error: 'username and message are required' }, 400);
+  }
+  const id = crypto.randomUUID();
+  await c.env.DB.prepare(
+    'INSERT INTO audience_chat (id, username, message) VALUES (?, ?, ?)'
+  ).bind(id, username, message).run();
+  
+  return c.json({ id, username, message, success: true });
+});
+
+// 12. COMEDIAN DURABLE OBJECT CONTROLS
+app.post('/api/comedians/:username/trigger', async (c) => {
+  const username = c.req.param('username');
+  const id = c.env.COMEDIAN_DO.idFromName(username);
+  const stub = c.env.COMEDIAN_DO.get(id);
+  const url = new URL(c.req.url);
+  url.pathname = `/trigger`;
+  url.searchParams.set('username', username);
+  return stub.fetch(new Request(url.toString(), { method: 'POST' }));
+});
+
+app.post('/api/comedians/:username/schedule', async (c) => {
+  const username = c.req.param('username');
+  const id = c.env.COMEDIAN_DO.idFromName(username);
+  const stub = c.env.COMEDIAN_DO.get(id);
+  const url = new URL(c.req.url);
+  url.pathname = `/schedule`;
+  url.searchParams.set('username', username);
+  return stub.fetch(new Request(url.toString(), { method: 'POST' }));
 });
 
 app.notFound((c) => {

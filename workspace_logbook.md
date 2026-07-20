@@ -34,3 +34,18 @@
 - 2026-07-10T15:03:34: Conducted UI/UX evaluation via browser subagent. Generated Heckler_UI_UX_Audit.md artifact with findings on ZLA app aesthetics, responsiveness, and user journey, and recorded recommendations for polish.
 - 2026-07-10T15:07:17: Updated Heckler_UI_UX_Audit.md with deep dive into user flow friction (clicks/scrolls) and conceptualized the Hostess/Stage inverted entry flow.
 - 2026-07-10T15:10:41: Corrected UI/UX audit and prompt generation to properly classify Heckler as a Hybrid layout (Blazor WASM + Cloudflare Workers/D1) rather than a pure ZLA app.
+
+## Session State - 2026-07-20
+- Pivot: Autonomous Comedian Syndicate
+- Objective: Integrate stateful comedian actors using Durable Objects, Workers AI MeloTTS text-to-speech engine, and simplify audience feedback to a chat table.
+- Applied D1 migrations for `audience_chat` table.
+- Bound and implemented `ComedianDO` with text joke generation (Llama) and TTS translation (MeloTTS), saving voice buffers to D1.
+- Updated Hono routing in `backend/src/index.ts` with chat feedback endpoints and DO triggers.
+- Verified compilation and local schema state.
+- Generated and implemented frontend changes via OrchestratorDO:
+  - Created `ChatMessageModel.cs` in `Heckler.Frontend.Models`.
+  - Expanded `HecklerApi.cs` with chat fetch/post and DO triggering.
+  - Implemented real-time polling layout and chat dialog in `Feed.razor`.
+- Executed `dotnet build` successfully on the Blazor WebAssembly frontend.
+
+
