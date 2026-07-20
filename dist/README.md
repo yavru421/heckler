@@ -1,1 +1,1 @@
-This folder contains the built output assets for the worker "heckler" generated at 2026-07-20T21:18:23.673Z.
+This folder contains the built output assets for the worker "heckler" generated at 2026-07-20T21:26:58.392Z.

@@ -170,63 +170,38 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
     // ── 2. Parse joke into segments ──────────────────────────────
     const segments = this.parseSegments(jokeText);
 
-    // ── 3. Synthesize TTS per speech segment, combine into one blob
+    // ── 3. Synthesize TTS as a single audio file ─────────────────
+    // Deepgram Aura-1 returns a complete audio container (MP3/WAV).
+    // Concatenating multiple containers produces an invalid file.
+    // Instead: call once with full cleaned text for a valid single blob.
     const speaker = this.pickSpeaker(username);
-    let combinedAudio: ArrayBuffer | null = null;
-    let byteOffset = 0;
+    let audioBuffer: ArrayBuffer | null = null;
 
     try {
-      const audioChunks: ArrayBuffer[] = [];
+      const cleanText = jokeText
+        .replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ")
+        .replace(/[#*$_[\](){}]/g, "")
+        .replace(/https?:\/\/\S+/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
 
-      for (const seg of segments) {
-        if (seg.type === "speech" && seg.text) {
-          const cleanText = seg.text
-            .replace(/[#*$_[\](){}]/g, "")
-            .replace(/https?:\/\/\S+/gi, "")
-            .replace(/\s+/g, " ")
-            .trim();
-
-          if (!cleanText) continue;
-
-          const ttsResponse = await this.env.AI.run(
-            "@cf/deepgram/aura-1",
-            { text: cleanText, speaker }
-          );
-          const audioBuffer = await ttsResponse.arrayBuffer();
-
-          seg.audioOffsetBytes = byteOffset;
-          seg.audioLengthBytes = audioBuffer.byteLength;
-          byteOffset += audioBuffer.byteLength;
-          audioChunks.push(audioBuffer);
-        }
-      }
-
-      // Combine all audio chunks into a single ArrayBuffer
-      if (audioChunks.length > 0) {
-        const totalLength = audioChunks.reduce(
-          (sum, chunk) => sum + chunk.byteLength,
-          0
+      if (cleanText) {
+        const ttsResponse = await this.env.AI.run(
+          "@cf/deepgram/aura-1",
+          { text: cleanText, speaker }
         );
-        const combined = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of audioChunks) {
-          combined.set(new Uint8Array(chunk), offset);
-          offset += chunk.byteLength;
-        }
-        combinedAudio = combined.buffer;
+        audioBuffer = await ttsResponse.arrayBuffer();
       }
     } catch (e) {
       console.error("Deepgram Aura-1 synthesis failed:", e);
     }
 
     // ── 4. Persist to D1 ─────────────────────────────────────────
-    // Build segment metadata (without audio data, just offsets)
+    // Build segment metadata (timing info for frontend speakText)
     const segmentMeta = segments.map((s) => ({
       type: s.type,
       text: s.text || undefined,
       durationMs: s.durationMs || undefined,
-      audioOffsetBytes: s.audioOffsetBytes ?? undefined,
-      audioLengthBytes: s.audioLengthBytes ?? undefined,
     }));
 
     await this.env.DB.prepare(
@@ -247,7 +222,7 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
         jokeText,
         category,
         username,
-        combinedAudio,
+        audioBuffer,
         JSON.stringify(segmentMeta)
       )
       .run();
@@ -257,7 +232,7 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
       text: jokeText,
       category,
       archetype: archetypeKey,
-      has_audio: combinedAudio ? true : false,
+      has_audio: audioBuffer ? true : false,
       segments: segmentMeta,
       delivery: { rate: archetype.rate, pitch: archetype.pitch },
     };

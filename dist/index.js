@@ -2331,37 +2331,15 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
     const jokeId = crypto.randomUUID();
     const segments = this.parseSegments(jokeText);
     const speaker = this.pickSpeaker(username);
-    let combinedAudio = null;
-    let byteOffset = 0;
+    let audioBuffer = null;
     try {
-      const audioChunks = [];
-      for (const seg of segments) {
-        if (seg.type === "speech" && seg.text) {
-          const cleanText = seg.text.replace(/[#*$_[\](){}]/g, "").replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
-          if (!cleanText) continue;
-          const ttsResponse = await this.env.AI.run(
-            "@cf/deepgram/aura-1",
-            { text: cleanText, speaker }
-          );
-          const audioBuffer = await ttsResponse.arrayBuffer();
-          seg.audioOffsetBytes = byteOffset;
-          seg.audioLengthBytes = audioBuffer.byteLength;
-          byteOffset += audioBuffer.byteLength;
-          audioChunks.push(audioBuffer);
-        }
-      }
-      if (audioChunks.length > 0) {
-        const totalLength = audioChunks.reduce(
-          (sum, chunk) => sum + chunk.byteLength,
-          0
+      const cleanText = jokeText.replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ").replace(/[#*$_[\](){}]/g, "").replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
+      if (cleanText) {
+        const ttsResponse = await this.env.AI.run(
+          "@cf/deepgram/aura-1",
+          { text: cleanText, speaker }
         );
-        const combined = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of audioChunks) {
-          combined.set(new Uint8Array(chunk), offset);
-          offset += chunk.byteLength;
-        }
-        combinedAudio = combined.buffer;
+        audioBuffer = await ttsResponse.arrayBuffer();
       }
     } catch (e) {
       console.error("Deepgram Aura-1 synthesis failed:", e);
@@ -2369,9 +2347,7 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
     const segmentMeta = segments.map((s) => ({
       type: s.type,
       text: s.text || void 0,
-      durationMs: s.durationMs || void 0,
-      audioOffsetBytes: s.audioOffsetBytes ?? void 0,
-      audioLengthBytes: s.audioLengthBytes ?? void 0
+      durationMs: s.durationMs || void 0
     }));
     await this.env.DB.prepare(
       "INSERT OR IGNORE INTO comedians (username, bio, archetype) VALUES (?, ?, ?)"
@@ -2387,7 +2363,7 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
       jokeText,
       category,
       username,
-      combinedAudio,
+      audioBuffer,
       JSON.stringify(segmentMeta)
     ).run();
     return {
@@ -2395,7 +2371,7 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
       text: jokeText,
       category,
       archetype: archetypeKey,
-      has_audio: combinedAudio ? true : false,
+      has_audio: audioBuffer ? true : false,
       segments: segmentMeta,
       delivery: { rate: archetype.rate, pitch: archetype.pitch }
     };
