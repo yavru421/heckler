@@ -43,14 +43,14 @@ app.get('/api/jokes', async (c) => {
 
   switch (sort) {
     case 'new':
-      query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+      query += ' ORDER BY (audio_data IS NOT NULL) DESC, created_at DESC LIMIT ? OFFSET ?';
       break;
     case 'random':
-      query += ' ORDER BY RANDOM() LIMIT ? OFFSET ?';
+      query += ' ORDER BY (audio_data IS NOT NULL) DESC, RANDOM() LIMIT ? OFFSET ?';
       break;
     case 'hot':
     default:
-      query += ' ORDER BY (kills - bombs) DESC, created_at DESC LIMIT ? OFFSET ?';
+      query += ' ORDER BY (audio_data IS NOT NULL) DESC, (kills - bombs) DESC, created_at DESC LIMIT ? OFFSET ?';
       break;
   }
 
