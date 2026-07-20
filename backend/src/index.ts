@@ -101,8 +101,14 @@ app.get('/api/jokes/:id/audio', async (c) => {
     return c.text('Audio not found', 404);
   }
   // D1 returns BLOBs as ArrayBuffer
-  return new Response(result.audio_data, {
-    headers: { 'Content-Type': 'audio/webm' }
+  const buffer = result.audio_data;
+  const bytes = new Uint8Array(buffer.slice(0, 4));
+  let contentType = 'audio/mpeg';
+  if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
+    contentType = 'audio/webm';
+  }
+  return new Response(buffer, {
+    headers: { 'Content-Type': contentType }
   });
 });
 
