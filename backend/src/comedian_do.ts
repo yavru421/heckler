@@ -90,8 +90,15 @@ Do NOT include any introduction, greetings, stage directions, or metadata. Outpu
       }
       const speaker = speakers[Math.abs(hash) % speakers.length];
 
+      const cleanText = jokeText
+        .replace(/\[PAUSE\]/gi, " ")
+        .replace(/[#*$_[\](){}]/g, "")
+        .replace(/https?:\/\/\S+/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
       const ttsResponse = await this.env.AI.run("@cf/deepgram/aura-1", {
-        text: jokeText,
+        text: cleanText,
         speaker: speaker
       });
       audioBuffer = await ttsResponse.arrayBuffer();

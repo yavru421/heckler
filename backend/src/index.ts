@@ -127,8 +127,15 @@ app.post('/api/tts', async (c) => {
       speaker = speaker.includes('female') || speaker.includes('woman') ? 'asteria' : 'orion';
     }
 
+    const cleanText = text
+      .replace(/\[PAUSE\]/gi, " ")
+      .replace(/[#*$_[\](){}]/g, "")
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
     const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
-      text: text,
+      text: cleanText,
       speaker: speaker
     });
     const audioBuffer = await ttsResponse.arrayBuffer();
