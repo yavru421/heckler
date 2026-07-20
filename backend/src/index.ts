@@ -112,6 +112,38 @@ app.get('/api/jokes/:id/audio', async (c) => {
   });
 });
 
+// 2.5. POST /api/tts — Direct TTS endpoint utilizing Cloudflare Workers AI
+app.post('/api/tts', async (c) => {
+  try {
+    const body = await c.req.json();
+    const text = body.text;
+    const voice = body.voice;
+    if (!text) {
+      return c.text('Text is required', 400);
+    }
+    let speaker = (voice || 'orion').toLowerCase();
+    const validSpeakers = ['angus', 'asteria', 'arcas', 'orion', 'orpheus', 'athena', 'luna', 'zeus', 'perseus', 'helios', 'hera', 'stella'];
+    if (!validSpeakers.includes(speaker)) {
+      speaker = speaker.includes('female') || speaker.includes('woman') ? 'asteria' : 'orion';
+    }
+
+    const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
+      text: text,
+      speaker: speaker
+    });
+    const audioBuffer = await ttsResponse.arrayBuffer();
+    return new Response(audioBuffer, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      }
+    });
+  } catch (err: any) {
+    return c.text(`TTS Generation Failed: ${err.message}`, 500);
+  }
+});
+
 // 3. POST /api/jokes — Submit a joke (supports JSON base64 or Multipart)
 app.post('/api/jokes', async (c) => {
   let text = '';
