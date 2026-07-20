@@ -1,41 +1,76 @@
 @page "/foyer"
 @inject NavigationManager Nav
+@layout MainLayout
 
-<div class="heckler-app">
-    <main class="app-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 75vh; padding: 2rem 1rem;">
-        <div class="fade-in-text" style="text-align: center; margin-bottom: 2rem;">
-            <div style="color: var(--neon-purple); text-transform: uppercase; letter-spacing: 3px; font-size: 0.9rem; font-weight: 700;">🎭 The Ultimate</div>
-            <h1 style="font-size: 3.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; letter-spacing: 4px; font-family: 'Oswald', sans-serif;">LIVE COMEDY <span class="neon-text">EXPERIENCE</span></h1>
-            
-            <p style="color: var(--text-secondary); margin: 0 auto; font-size: 1.1rem; max-width: 500px; line-height: 1.6;">
-                Listen to sets, build custom lineups, and join virtual tables to heckle or cheer in real-time.
+<div class="app-shell foyer-shell">
+    <nav class="top-bar">
+        <div class="brand">
+            <span class="brand-icon">🎙️</span>
+            <span class="brand-text">heckler</span>
+        </div>
+        <div class="nav-links">
+            <a href="/feed">Showroom</a>
+            <a href="/lineups">Playlists</a>
+            <a href="/rooms">Tables</a>
+        </div>
+    </nav>
+
+    <main class="hero-section">
+        <div class="hero-content glass-panel glow-border">
+            <div class="live-badge">
+                <span class="live-pulse"></span>
+                Live Comedian Syndicate
+            </div>
+            <h1 class="hero-title">
+                Step into the <span class="neon-text">Spotlight</span>
+            </h1>
+            <p class="hero-subtitle">
+                A premium, AI-powered comedy showroom where autonomous comedians perform,
+                audiences react in real-time, and every set is unforgettable.
             </p>
+            <div class="hero-actions">
+                <button class="btn-premium" @onclick="EnterShowroom">
+                    Enter Showroom
+                </button>
+                <button class="btn-premium btn-ghost" @onclick="ExploreComedians">
+                    Meet the Syndicate
+                </button>
+            </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; width: 100%; max-width: 800px; padding: 1rem;">
-            <button class="btn-generate haptic-btn glass-panel" @onclick='() => Nav.NavigateTo("/feed")' style="padding: 2rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.05);">
-                <span style="font-size: 2.5rem;">📜</span>
-                <div style="font-family: 'Oswald'; font-size: 1.2rem; letter-spacing: 1px; color: var(--neon-blue);">THE SHOWROOM</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: none; font-family: 'Inter';">Listen to the latest jokes</div>
-            </button>
-
-            <button class="btn-generate haptic-btn glass-panel" @onclick='() => Nav.NavigateTo("/submit")' style="padding: 2rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; border: 1px solid rgba(255, 51, 102, 0.3); background: rgba(255, 51, 102, 0.05);">
-                <span style="font-size: 2.5rem;">🎤</span>
-                <div style="font-family: 'Oswald'; font-size: 1.2rem; letter-spacing: 1px; color: var(--neon-red);">TAKE THE STAGE</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: none; font-family: 'Inter';">Record your own 1-minute set</div>
-            </button>
-
-            <button class="btn-generate haptic-btn glass-panel" @onclick='() => Nav.NavigateTo("/lineups")' style="padding: 2rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; border: 1px solid rgba(157, 78, 221, 0.3); background: rgba(157, 78, 221, 0.05);">
-                <span style="font-size: 2.5rem;">📋</span>
-                <div style="font-family: 'Oswald'; font-size: 1.2rem; letter-spacing: 1px; color: var(--neon-purple);">LINEUPS</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: none; font-family: 'Inter';">Curate and share comedy playlists</div>
-            </button>
-
-            <button class="btn-generate haptic-btn glass-panel" @onclick='() => Nav.NavigateTo("/rooms")' style="padding: 2rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; border: 1px solid rgba(0, 255, 136, 0.3); background: rgba(0, 255, 136, 0.05);">
-                <span style="font-size: 2.5rem;">🍻</span>
-                <div style="font-family: 'Oswald'; font-size: 1.2rem; letter-spacing: 1px; color: var(--neon-green);">VIRTUAL TABLES</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: none; font-family: 'Inter';">Co-listen and react with friends</div>
-            </button>
+        <div class="showroom-preview">
+            <div class="preview-card glass-panel" @onclick="EnterShowroom" style="cursor: pointer;">
+                <div class="preview-header">
+                    <span class="preview-dot amber"></span>
+                    <span>On Stage Now</span>
+                </div>
+                <div class="preview-body">
+                    <h3>Neon Mike</h3>
+                    <p>“Why do cloud developers never get lost? They always follow the edge route.”</p>
+                </div>
+            </div>
+            <div class="preview-card glass-panel" @onclick="EnterShowroom" style="cursor: pointer;">
+                <div class="preview-header">
+                    <span class="preview-dot violet"></span>
+                    <span>Audience Vibe</span>
+                </div>
+                <div class="preview-body">
+                    <h3>🔥 Bringing the heat</h3>
+                    <p>1,247 live reactions and climbing.</p>
+                </div>
+            </div>
         </div>
     </main>
 </div>
+
+@code {
+    private void EnterShowroom()
+    {
+        Nav.NavigateTo("/feed");
+    }
+
+    private void ExploreComedians()
+    {
+        Nav.NavigateTo("/feed");
+    }
+}

@@ -5,50 +5,70 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-
-<div class="heckler-app">
-    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 1.5rem; border-top: none;">
-        <div class="logo">
-            <h1>ONLINE COMEDY <span class="neon-text">CLUB</span></h1>
+<div class="app-shell showroom-grid">
+    <!-- COLUMN 1: Comedian Syndicate Sidebar -->
+    <aside class="glass-panel scroll-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; border-color: rgba(139, 92, 246, 0.2);">
+        <h3 style="font-size: 1rem; margin-top: 0; color: var(--accent-violet); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            🤖 Comedian Syndicate
+        </h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            @foreach (var comedian in syndicateList)
+            {
+                <div class="comedian-card @(selectedComedian == comedian ? "active" : "")" @onclick="() => SelectComedian(comedian)">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <strong style="color: var(--text-primary);">@@@comedian</strong>
+                        <span class="live-pulse" style="margin: 0; width: 8px; height: 8px; background-color: var(--neon-green); box-shadow: 0 0 6px var(--neon-green);"></span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Autonomous Durable Object</div>
+                    
+                    @if (selectedComedian == comedian)
+                    {
+                        <button class="btn-premium" @onclick="() => CueComedian(comedian)" @onclick:stopPropagation="true" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-top: 0.5rem; width: 100%; border-radius: 8px;">
+                            Cue Standup Set 🎭
+                        </button>
+                    }
+                </div>
+            }
         </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/foyer")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-red); background: transparent; color: var(--neon-red); font-family: 'Oswald', sans-serif;">🏠 Foyer</button>
-            <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/lineups")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">📜 Playlists</button>
-            <button class="haptic-btn" @onclick='() => Nav.NavigateTo("/rooms")' style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-blue); background: transparent; color: var(--neon-blue); font-family: 'Oswald', sans-serif;">👥 Tables</button>
-        </div>
-    </header>
 
-    <main class="stage-container" style="max-width: 800px;">
-        <!-- Showroom Stage Spotlight Area -->
-        <div class="glass-panel fade-in-text" style="position: relative; overflow: hidden; padding: 3rem 2rem; text-align: center; border-color: var(--neon-purple); min-height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 2rem;">
-            <div class="spotlight" style="background: radial-gradient(circle, @(isPlaying ? "rgba(157, 78, 221, 0.22)" : "rgba(255, 51, 102, 0.05)") 0%, transparent 70%);"></div>
+        <div class="glass-panel" style="padding: 0.75rem; font-size: 0.75rem; color: var(--text-secondary); background: rgba(0,0,0,0.25);">
+            💡 Durable Object instances run independently on the edge with SQLite persistent state.
+        </div>
+    </aside>
+
+    <!-- COLUMN 2: Showroom Stage -->
+    <main style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <!-- Stage spotlight player -->
+        <section class="glass-panel glow-border" style="position: relative; overflow: hidden; padding: 3.5rem 2rem; text-align: center; min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1;">
+            <div class="spotlight" style="background: radial-gradient(circle, @(isPlaying ? "rgba(139, 92, 246, 0.16)" : "rgba(255, 179, 71, 0.05)") 0%, transparent 70%);"></div>
 
             @if (activeJoke != null)
             {
                 <div style="z-index: 1;">
-                    <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                        <span @onclick="GoToComedian" style="color: var(--neon-purple); font-weight: 700; font-size: 1.1rem; cursor: pointer; text-decoration: underline;">@@@activeJoke.AuthorName</span>
-                        <span style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.05); padding: 0.2rem 0.6rem; border-radius: 10px;">@activeJoke.Category</span>
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                        <span @onclick="GoToComedian" style="color: var(--accent-violet); font-weight: 700; font-size: 1.2rem; cursor: pointer; text-decoration: underline; text-shadow: 0 0 12px rgba(139, 92, 246, 0.3);">@@@activeJoke.AuthorName</span>
+                        <span style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.05); padding: 0.25rem 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border);">@activeJoke.Category</span>
                     </div>
 
-                    <p style="font-size: 1.6rem; line-height: 1.5; color: var(--text-primary); font-weight: 300; max-width: 600px; margin: 1.5rem auto;">
-                        @activeJoke.Text
+                    <p style="font-size: 1.8rem; line-height: 1.55; color: var(--text-primary); font-weight: 300; max-width: 620px; margin: 1.5rem auto; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">
+                        “@activeJoke.Text”
                     </p>
 
                     @if (activeJoke.HasAudio)
                     {
-                        <div style="color: var(--neon-green); font-size: 0.8rem; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 1rem;">
-                            🎙️ REAL VOICE RECORDING
+                        <div style="color: var(--neon-green); font-size: 0.8rem; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 1.25rem; text-shadow: 0 0 8px rgba(0,255,136,0.3);">
+                            🎙️ Edge-Synthesized Voice Audio
                         </div>
                     }
                     else
                     {
-                        <div style="color: var(--neon-blue); font-size: 0.8rem; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 1rem;">
-                            🤖 TTS COMEDIAN
+                        <div style="color: var(--accent-amber); font-size: 0.8rem; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 1.25rem; text-shadow: 0 0 8px rgba(255,179,71,0.3);">
+                            🤖 TTS Default Synthesizer
                         </div>
                     }
                     
-                    <div class="visualizer @(isPlaying ? "active" : "")">
+                    <div class="visualizer @(isPlaying ? "active" : "")" style="margin-top: 1rem;">
                         <div class="visualizer-bar"></div>
                         <div class="visualizer-bar"></div>
                         <div class="visualizer-bar"></div>
@@ -59,120 +79,134 @@
             }
             else if (aiGenerating)
             {
-                <div style="z-index: 1; width: 100%; max-width: 600px;">
-                    <div class="skeleton-box skeleton-title"></div>
-                    <div class="skeleton-box skeleton-text"></div>
-                    <div class="skeleton-box skeleton-text"></div>
-                    <div class="skeleton-box skeleton-text" style="width: 80%; margin: 0 auto;"></div>
+                <div style="z-index: 1; width: 100%; max-width: 500px;">
+                    <div class="skeleton-box skeleton-title" style="background: rgba(255,255,255,0.05); margin-bottom: 1rem;"></div>
+                    <div class="skeleton-box skeleton-text" style="background: rgba(255,255,255,0.05); width: 100%;"></div>
+                    <div class="skeleton-box skeleton-text" style="background: rgba(255,255,255,0.05); width: 85%; margin: 0.5rem auto;"></div>
                 </div>
             }
             else
             {
                 <div style="z-index: 1;">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎤</div>
-                    <h2 style="margin-bottom: 0.5rem;">Take a Seat</h2>
-                    <p style="color: var(--text-secondary); max-width: 400px; margin: 0 auto 1.5rem auto;">Select a set list or ask the AI house comedian to write custom jokes to start the show.</p>
+                    <div style="font-size: 4.5rem; margin-bottom: 1rem; filter: drop-shadow(0 0 16px rgba(255, 179, 71, 0.4));">🎙️</div>
+                    <h2 class="neon-text" style="margin-bottom: 0.5rem; font-size: 2rem;">Take a Seat</h2>
+                    <p style="color: var(--text-secondary); max-width: 440px; margin: 0 auto 1.5rem auto; font-size: 0.95rem;">Select a set playlist, cue an autonomous comedian, or ask the AI writer to generate customized jokes.</p>
                 </div>
             }
-        </div>
+        </section>
 
-        <!-- Main Showroom Dashboard -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
-            <!-- Left: Player Control Panel -->
-            <div class="glass-panel" style="padding: 1.5rem;">
-                <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">🎛️ Stage Controls</h3>
-                
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <!-- Play / Pause / Skip -->
+        <!-- Player controls and options -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            <!-- Left: Playback Dashboard -->
+            <section class="glass-panel" style="padding: 1.25rem;">
+                <h3 style="font-size: 0.9rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                    🎛️ Stage Manager
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 0.85rem;">
                     <div style="display: flex; gap: 0.5rem;">
                         @if (isPlaying)
                         {
-                            <button class="haptic-btn" @onclick="PauseSet" style="flex: 1; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.15); color: var(--neon-red); font-family: 'Oswald', sans-serif;">⏸️ PAUSE</button>
+                            <button class="btn-premium" @onclick="PauseSet" style="flex: 1; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: var(--danger); box-shadow: none;">
+                                ⏸️ PAUSE SET
+                            </button>
                         }
                         else
                         {
-                            <button class="haptic-btn" @onclick="PlaySet" disabled="@(jokeQueue.Count == 0 && string.IsNullOrEmpty(aiSetText))" style="flex: 1; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.15); color: var(--neon-green); font-family: 'Oswald', sans-serif;">▶️ PLAY SET</button>
+                            <button class="btn-premium" @onclick="PlaySet" disabled="@(jokeQueue.Count == 0 && string.IsNullOrEmpty(aiSetText))" style="flex: 1;">
+                                ▶️ PLAY SET
+                            </button>
                         }
-                        <button class="haptic-btn" @onclick="NextJoke" disabled="@(jokeQueue.Count <= 1 && string.IsNullOrEmpty(aiSetText))" style="padding: 0.8rem 1.2rem; border-radius: 8px; border: 1px solid var(--surface-border); background: transparent; color: white;">⏭️</button>
+                        <button class="btn-premium btn-ghost" @onclick="NextJoke" disabled="@(jokeQueue.Count <= 1 && string.IsNullOrEmpty(aiSetText))" style="padding: 0.75rem 1.25rem;">
+                            ⏭️
+                        </button>
                     </div>
 
-                    <!-- TTS Speed Control -->
                     <div>
                         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
-                            <span>Delivery Pace (Speed)</span>
+                            <span>Joke Delivery Pace</span>
                             <span>@deliveryRate.ToString("F1")x</span>
                         </div>
-                        <input type="range" min="0.6" max="1.6" step="0.1" @bind="deliveryRate" style="width: 100%; accent-color: var(--neon-purple);" />
+                        <input type="range" min="0.6" max="1.6" step="0.1" @bind="deliveryRate" style="width: 100%; accent-color: var(--accent-violet);" />
                     </div>
 
-                    <!-- Queue Status -->
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.3); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--surface-border);">
-                        📍 Currently: <strong>@(activeJokeIndex + 1) / @jokeQueue.Count</strong> in lineup
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between;">
+                        <span>Lineup Position:</span>
+                        <strong>@(activeJokeIndex + 1) / @jokeQueue.Count</strong>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Right: Select Set / Book Show -->
-            <div class="glass-panel" style="padding: 1.5rem;">
-                <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">🎭 Book a Show</h3>
-                
+            <!-- Right: Playlists & AI Writer -->
+            <section class="glass-panel" style="padding: 1.25rem;">
+                <h3 style="font-size: 0.9rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                    ✍️ AI Comedy Writer
+                </h3>
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                    <!-- Dynamic DB Sets -->
-                    <button class="haptic-btn" @onclick='() => LoadCategorySet("observational")' style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(255,255,255,0.03); color: white; text-align: left; font-size: 0.9rem;">👀 Observational Set (From DB)</button>
-                    <button class="haptic-btn" @onclick='() => LoadCategorySet("dark")' style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(255,255,255,0.03); color: white; text-align: left; font-size: 0.9rem;">🌑 Dark Comedy Set (From DB)</button>
-                    
-                    <!-- AI Comedian Setup -->
-                    <div style="border-top: 1px solid var(--surface-border); padding-top: 0.75rem; margin-top: 0.25rem;">
-                        <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">AI Comedian Prompt</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn-premium btn-ghost" @onclick='() => LoadCategorySet("observational")' style="flex: 1; padding: 0.5rem; font-size: 0.8rem;">👀 Obs. Set</button>
+                        <button class="btn-premium btn-ghost" @onclick='() => LoadCategorySet("dark")' style="flex: 1; padding: 0.5rem; font-size: 0.8rem;">🌑 Dark Set</button>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--glass-border); padding-top: 0.5rem;">
+                        <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Custom Set Theme</label>
                         <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" @bind="aiTheme" placeholder="e.g. airport security" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem;" />
-                            <button class="haptic-btn" @onclick="GenerateAiSet" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: var(--neon-purple); color: white; font-family: 'Oswald', sans-serif; font-size: 0.8rem; white-space: nowrap;">GENERATE 🤖</button>
+                            <input type="text" @bind="aiTheme" class="form-input" placeholder="e.g. airport security" style="font-size: 0.8rem; padding: 0.5rem 1rem; border-radius: 8px;" />
+                            <button class="btn-premium" @onclick="GenerateAiSet" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">Write 🤖</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Crowd Soundboard Interaction (Replaced Kills/Bombs Buttons) -->
-        <div class="glass-panel" style="padding: 1.5rem; text-align: center;">
-            <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); margin-bottom: 1rem;">🔊 Crowd Ambient Reactions</h3>
-            <div style="display: flex; justify-content: center; gap: 1rem;">
-                <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("laugh")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-green); background: rgba(0,255,136,0.05); color: var(--neon-green); font-family: 'Oswald', sans-serif; font-size: 1rem;">😂 LAUGH</button>
-                <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("clap")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-blue); background: rgba(0,240,255,0.05); color: var(--neon-blue); font-family: 'Oswald', sans-serif; font-size: 1rem;">👏 CLAP</button>
-                <button class="haptic-btn reaction-burst" @onclick='() => TriggerReaction("boo")' style="padding: 0.8rem 1.5rem; border-radius: 30px; border: 1px solid var(--neon-red); background: rgba(255,51,102,0.05); color: var(--neon-red); font-family: 'Oswald', sans-serif; font-size: 1rem;">🍅 BOO</button>
-            </div>
-            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.75rem; margin-bottom: 0;">Interact synchronously to trigger local synthesizer sound effects.</p>
-        </div>
-
-        <!-- Audience Chat Section -->
-        <div class="glass-panel" style="padding: 1.5rem; margin-top: 2rem;">
-            <h3 style="font-size: 1rem; margin-top: 0; color: var(--text-secondary); border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">💬 Audience Chat Feedback</h3>
-            
-            <div style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; text-align: left; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                @if (chatMessages.Count == 0)
-                {
-                    <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0; text-align: center;">No chatter in the club yet. Start the banter!</p>
-                }
-                else
-                {
-                    @foreach (var msg in chatMessages)
-                    {
-                        <div style="font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">
-                            <strong style="color: var(--neon-blue);">@msg.Username</strong>: 
-                            <span style="color: var(--text-primary);">@msg.Message</span>
-                            <span style="font-size: 0.7rem; color: var(--text-secondary); float: right;">@msg.CreatedAt.ToLocalTime().ToString("t")</span>
-                        </div>
-                    }
-                }
-            </div>
-
-            <div style="display: flex; gap: 0.5rem;">
-                <input type="text" @bind="chatUsername" placeholder="Nickname..." style="width: 120px; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem;" />
-                <input type="text" @bind="newChatMessage" @onkeyup="HandleChatKey" placeholder="Type feedback banter..." style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem;" />
-                <button class="haptic-btn" @onclick="SendChat" style="padding: 0.5rem 1.2rem; border-radius: 6px; border: none; background: var(--neon-blue); color: white; font-family: 'Oswald', sans-serif; font-size: 0.85rem;">SEND 📣</button>
-            </div>
+            </section>
         </div>
     </main>
+
+    <!-- COLUMN 3: Audience Bar -->
+    <aside class="glass-panel scroll-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; border-color: rgba(255, 179, 71, 0.2);">
+        <h3 style="font-size: 1rem; margin-top: 0; color: var(--accent-amber); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            💬 Audience Club Chat
+        </h3>
+
+        <!-- Chat messages view -->
+        <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.25rem; max-height: 380px;" class="scroll-panel">
+            @if (chatMessages.Count == 0)
+            {
+                <div style="color: var(--text-secondary); font-size: 0.85rem; padding: 2rem 0; text-align: center;">
+                    Bar is quiet. Write some feedback banter!
+                </div>
+            }
+            else
+            {
+                @foreach (var msg in chatMessages)
+                {
+                    <div class="chat-message">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+                            <span class="chat-username">@msg.Username</span>
+                            <span class="chat-meta">@msg.CreatedAt.ToLocalTime().ToString("t")</span>
+                        </div>
+                        <div style="color: var(--text-primary); font-size: 0.85rem;">@msg.Message</div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Reactions soundboard -->
+        <section style="border-top: 1px solid var(--glass-border); padding-top: 0.75rem;">
+            <h4 style="font-size: 0.8rem; margin: 0 0 0.5rem 0; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Crowd Reaction Soundboard</h4>
+            <div style="display: flex; gap: 0.4rem;">
+                <button class="btn-premium btn-ghost reaction-burst" @onclick='() => TriggerReaction("laugh")' style="flex: 1; padding: 0.5rem 0; font-size: 0.75rem; border-color: var(--neon-green); color: var(--neon-green);">😂 Laugh</button>
+                <button class="btn-premium btn-ghost reaction-burst" @onclick='() => TriggerReaction("clap")' style="flex: 1; padding: 0.5rem 0; font-size: 0.75rem; border-color: var(--neon-blue); color: var(--neon-blue);">👏 Clap</button>
+                <button class="btn-premium btn-ghost reaction-burst" @onclick='() => TriggerReaction("boo")' style="flex: 1; padding: 0.5rem 0; font-size: 0.75rem; border-color: var(--neon-red); color: var(--neon-red);">🍅 Boo</button>
+            </div>
+        </section>
+
+        <!-- Send message form -->
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px solid var(--glass-border); padding-top: 0.75rem;">
+            <input type="text" @bind="chatUsername" class="form-input" placeholder="Nickname..." style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 8px;" />
+            <div style="display: flex; gap: 0.4rem;">
+                <input type="text" @bind="newChatMessage" @onkeyup="HandleChatKey" class="form-input" placeholder="Feedback banter..." style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 8px; flex: 1;" />
+                <button class="btn-premium" @onclick="SendChat" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;">Send</button>
+            </div>
+        </div>
+    </aside>
 </div>
 
 @code {
@@ -189,6 +223,10 @@
     private bool aiGenerating = false;
     private string aiSetText = "";
 
+    // Syndicate variables
+    private List<string> syndicateList = new() { "NeonMike", "SpicySarah", "QuantumQuentin" };
+    private string selectedComedian = "NeonMike";
+
     protected override async Task OnParametersSetAsync()
     {
         if (!string.IsNullOrEmpty(LineupQueryId))
@@ -204,6 +242,42 @@
             }
         }
         await LoadCategorySet("observational");
+    }
+
+    private void SelectComedian(string comedian)
+    {
+        selectedComedian = comedian;
+        StateHasChanged();
+    }
+
+    private async Task CueComedian(string comedianName)
+    {
+        await CancelPlayback();
+        aiGenerating = true;
+        StateHasChanged();
+
+        // Trigger the ComedianDO to generate and save a joke with TTS audio
+        var triggered = await Api.TriggerComedianAsync(comedianName);
+        if (triggered)
+        {
+            // Load latest jokes from this comedian
+            jokeQueue = await Api.GetFeedAsync("new", 0, null);
+            // Filter queue to this comedian
+            jokeQueue = jokeQueue.Where(j => j.AuthorName.Equals(comedianName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (jokeQueue.Count > 0)
+            {
+                activeJokeIndex = 0;
+                activeJoke = jokeQueue[0];
+            }
+        }
+
+        aiGenerating = false;
+        StateHasChanged();
+        if (activeJoke != null)
+        {
+            await PlaySet();
+        }
     }
 
     private async Task LoadCategorySet(string category)
@@ -252,7 +326,6 @@
 
         if (!string.IsNullOrEmpty(aiSetText))
         {
-            // Playing the AI set
             await JS.InvokeVoidAsync("audioInterop.speakText", aiSetText, deliveryRate);
             isPlaying = false;
             aiSetText = "";
@@ -261,7 +334,6 @@
             return;
         }
 
-        // Loop through queue
         while (isPlaying && activeJokeIndex < jokeQueue.Count)
         {
             activeJoke = jokeQueue[activeJokeIndex];
@@ -269,14 +341,12 @@
 
             if (activeJoke.HasAudio)
             {
-                // Play recorded audio
                 var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
                 var audioUrl = $"{baseAddr}api/jokes/{activeJoke.Id}/audio";
                 await JS.InvokeVoidAsync("audioInterop.playAudioUrl", audioUrl);
             }
             else
             {
-                // Play TTS
                 await JS.InvokeVoidAsync("audioInterop.speakText", activeJoke.Text, deliveryRate);
             }
 
@@ -339,7 +409,6 @@
         aiSetText = await Api.GenerateAiSetAsync(aiTheme);
         aiGenerating = false;
         
-        // Setup AI Joke display
         activeJoke = new JokeModel
         {
             AuthorName = "AIHouseComedian",
@@ -377,7 +446,6 @@
         {
             chatUsername = storedUsername;
         }
-
 
         chatPollTimer = new System.Threading.Timer(async _ =>
         {
