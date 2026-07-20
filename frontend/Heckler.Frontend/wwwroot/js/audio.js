@@ -1,5 +1,6 @@
 let mediaRecorder = null;
 let audioChunks = [];
+let segmentedAudioCtx = null;
 
 window.audioInterop = {
     // 1. Microphone Recording API
@@ -109,7 +110,7 @@ window.audioInterop = {
     speakText: function (text, rate = 1.0) {
         return new Promise((resolve) => {
             window.speechSynthesis.cancel();
-            const parts = text.split(/\[PAUSE\]/i);
+            const parts = text.split(/\[PAUSE(?::([0-9.]+))?\]/i);
             let index = 0;
 
             function speakNext() {
@@ -117,21 +118,32 @@ window.audioInterop = {
                     resolve();
                     return;
                 }
-                const part = parts[index].trim();
-                if (!part) {
-                    index++;
-                    setTimeout(speakNext, 800); // 800ms pause for empty sections/PAUSE tags
+                const part = parts[index];
+                const pauseVal = parts[index + 1];
+                index += 2;
+
+                const trimmed = part ? part.trim() : "";
+                
+                let delay = 500;
+                if (index <= parts.length) {
+                    if (pauseVal !== undefined) {
+                        delay = parseFloat(pauseVal) * 1000 || 1000;
+                    } else {
+                        delay = 1000; // default for [PAUSE]
+                    }
+                }
+
+                if (!trimmed) {
+                    setTimeout(speakNext, delay);
                     return;
                 }
 
-                const utterance = new SpeechSynthesisUtterance(part);
+                const utterance = new SpeechSynthesisUtterance(trimmed);
                 utterance.rate = rate;
                 utterance.onend = () => {
-                    index++;
-                    setTimeout(speakNext, 500); // Small pause after speech segments
+                    setTimeout(speakNext, delay);
                 };
                 utterance.onerror = () => {
-                    index++;
                     speakNext();
                 };
                 window.speechSynthesis.speak(utterance);
@@ -143,6 +155,64 @@ window.audioInterop = {
 
     cancelSpeech: function () {
         window.speechSynthesis.cancel();
+    },
+
+    // 3.5 Segmented Joke Playback
+    playSegmentedJoke: async function (baseUrl, jokeId, segmentsJson, rate) {
+        this.cancelSegmentedPlayback();
+        
+        segmentedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const segments = JSON.parse(segmentsJson);
+        let speechIndex = 0;
+
+        return new Promise(async (resolve) => {
+            for (const segment of segments) {
+                if (!segmentedAudioCtx || segmentedAudioCtx.state === 'closed') {
+                    resolve();
+                    return;
+                }
+
+                if (segment.type === 'pause') {
+                    await new Promise(r => setTimeout(r, segment.durationMs || 0));
+                } else if (segment.type === 'speech') {
+                    const audioUrl = `${baseUrl}api/jokes/${jokeId}/audio/segment/${speechIndex}`;
+                    
+                    try {
+                        const response = await fetch(audioUrl);
+                        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                        const arrayBuffer = await response.arrayBuffer();
+                        
+                        if (!segmentedAudioCtx || segmentedAudioCtx.state === 'closed') {
+                            resolve();
+                            return;
+                        }
+
+                        const audioBuffer = await segmentedAudioCtx.decodeAudioData(arrayBuffer);
+                        const source = segmentedAudioCtx.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.playbackRate.value = rate;
+                        source.connect(segmentedAudioCtx.destination);
+                        
+                        await new Promise(r => {
+                            source.onended = r;
+                            source.start(0);
+                        });
+                    } catch (e) {
+                        console.error(`Failed to play segment ${speechIndex}:`, e);
+                    }
+                    
+                    speechIndex++;
+                }
+            }
+            resolve();
+        });
+    },
+
+    cancelSegmentedPlayback: function () {
+        if (segmentedAudioCtx) {
+            segmentedAudioCtx.close().catch(console.error);
+            segmentedAudioCtx = null;
+        }
     },
 
     // 4. Synthesizer sound effects (Web Audio API)

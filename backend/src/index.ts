@@ -85,6 +85,7 @@ app.get('/api/jokes', async (c) => {
         bombs: joke.bombs,
         created_at: joke.created_at,
         has_audio: hasAudio,
+        segments: joke.segments ? JSON.parse(joke.segments as string) : null,
         topHeckle
       };
     })
@@ -125,6 +126,38 @@ app.get('/api/jokes/:id/audio', async (c) => {
 
   c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
   return response;
+});
+
+// 2.1. GET /api/jokes/:id/audio/segment/:segIdx — retrieve a specific audio segment
+app.get('/api/jokes/:id/audio/segment/:segIdx', async (c) => {
+  const id = c.req.param('id');
+  const segIdx = parseInt(c.req.param('segIdx'));
+
+  const result: any = await c.env.DB.prepare(
+    'SELECT audio_data, segments FROM jokes WHERE id = ?'
+  ).bind(id).first();
+
+  if (!result || !result.audio_data || !result.segments) {
+    return c.text('Segment not found', 404);
+  }
+
+  const segments = JSON.parse(result.segments);
+  const speechSegments = segments.filter((s: any) => s.type === 'speech' && s.audioOffsetBytes !== undefined);
+
+  if (segIdx < 0 || segIdx >= speechSegments.length) {
+    return c.text('Segment index out of range', 404);
+  }
+
+  const seg = speechSegments[segIdx];
+  const fullBuffer = result.audio_data as ArrayBuffer;
+  const segmentBuffer = fullBuffer.slice(seg.audioOffsetBytes, seg.audioOffsetBytes + seg.audioLengthBytes);
+
+  return new Response(segmentBuffer, {
+    headers: {
+      'Content-Type': 'audio/mpeg',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  });
 });
 
 // 2.5. POST /api/tts — Direct TTS endpoint utilizing Cloudflare Workers AI
@@ -453,7 +486,8 @@ app.get('/api/comedians/:username', async (c) => {
     kills: j.kills,
     bombs: j.bombs,
     created_at: j.created_at,
-    has_audio: j.audio_data ? true : false
+    has_audio: j.audio_data ? true : false,
+    segments: j.segments ? JSON.parse(j.segments as string) : null
   }));
 
   return c.json({
@@ -499,7 +533,7 @@ app.post('/api/club/generate-set', async (c) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an AI Stand-up Comedian on stage at a comedy club. Deliver a short, funny 3-joke set on the user\'s requested topic. Separate each joke clearly with a [PAUSE] tag for the text-to-speech player. Keep it clean and witty.'
+            content: 'You are an AI Stand-up Comedian on stage at a comedy club. Deliver a short, punchy 3-joke set on the user\'s requested topic. Each joke MUST have a setup, misdirection, and punchline. Insert [PAUSE:1.5] tags between jokes for timing. NEVER use puns or cliché openers like "Have you ever noticed" or "What\'s the deal with". Keep it clean, sharp, and witty.'
           },
           {
             role: 'user',
