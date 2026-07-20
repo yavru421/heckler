@@ -13,3 +13,9 @@
     - **Live Chat & Reactions**: Audio reactions (laugh, clap, boo) + banter chat box integrated cleanly at the bottom.
     - **Past Jokes Library**: List of past jokes/clips below the stage, clickable to play.
 3. **Compile and Verify**: Run `dotnet build`.
+
+## Session Resolution & Push
+- Restructured `Feed.razor` into a single-column, mobile-first view optimized for phones.
+- Swapped root route `/` to point to the simplified Showroom Feed.
+- Added query modification in `backend/src/index.ts` to sort and prioritize jokes containing `audio_data IS NOT NULL` first. This ensures high-quality Workers AI (Deepgram Aura-1) voice TTS plays immediately on page load, rather than falling back to robotic browser synthesis.
+- Committed all files and pushed both branches to the remote repository to trigger Cloudflare CI deployment.
