@@ -45,14 +45,62 @@ window.audioInterop = {
     },
 
     // 2. Play Audio BLOB URL
-    playAudioUrl: function (url) {
-        return new Promise((resolve) => {
-            const audio = new Audio(url);
-            audio.onended = () => resolve();
-            audio.onerror = () => resolve();
-            audio.play().catch(e => {
-                console.error("Playback failed", e);
+    playAudioUrl: async function (url) {
+        return new Promise(async (resolve) => {
+            let audioUrlToPlay = url;
+            let objectUrlToRevoke = null;
+
+            try {
+                const cacheName = 'heckler-audio-v1';
+                const cache = await window.caches.open(cacheName);
+                const cachedResponse = await cache.match(url);
+
+                if (cachedResponse) {
+                    const blob = await cachedResponse.blob();
+                    objectUrlToRevoke = URL.createObjectURL(blob);
+                    audioUrlToPlay = objectUrlToRevoke;
+                } else {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const responseToCache = response.clone();
+                        try {
+                            await cache.put(url, responseToCache);
+                        } catch (cacheErr) {
+                            console.warn("Failed to write to browser Cache Storage:", cacheErr);
+                        }
+                        const blob = await response.blob();
+                        objectUrlToRevoke = URL.createObjectURL(blob);
+                        audioUrlToPlay = objectUrlToRevoke;
+                    }
+                }
+            } catch (err) {
+                console.error("Browser caching/fetching audio failed, falling back to direct play:", err);
+                audioUrlToPlay = url;
+            }
+
+            const audio = new Audio(audioUrlToPlay);
+
+            const cleanup = () => {
+                if (objectUrlToRevoke) {
+                    try {
+                        URL.revokeObjectURL(objectUrlToRevoke);
+                    } catch (e) {
+                        console.error("Failed to revoke object URL:", e);
+                    }
+                    objectUrlToRevoke = null;
+                }
                 resolve();
+            };
+
+            audio.onended = cleanup;
+            audio.onerror = (e) => {
+                console.error("Audio playback error:", e);
+                cleanup();
+            };
+
+            audio.play().catch(e => {
+                console.error("Playback failed:", e);
+                cleanup();
             });
         });
     },

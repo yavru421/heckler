@@ -6,7 +6,6 @@
             <h1 class="neon-text fade-in-text">HECKLER</h1>
             <div class="logo-subtitle">LIVE ONLINE COMEDY CLUB</div>
         </div>
-        <Heckler.Frontend.Layout.NavMenu />
     </header>
 
     <main class="stage-container fade-in-text">
@@ -27,10 +26,11 @@
 
     .app-header {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
-        padding: 1rem 3rem;
-        background: rgba(10, 10, 12, 0.85);
+        text-align: center;
+        padding: 1rem;
+        background: rgba(10, 10, 12, 0.95);
         border-bottom: 1px solid var(--surface-border);
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
     }
@@ -38,15 +38,28 @@
     .logo {
         display: flex;
         flex-direction: column;
+        align-items: center;
+    }
+
+    .logo h1 {
+        font-size: 1.8rem;
+        margin: 0;
     }
 
     .logo-subtitle {
         font-family: 'Oswald', sans-serif;
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         color: var(--neon-purple);
         letter-spacing: 4px;
         text-transform: uppercase;
-        margin-top: -5px;
+        margin-top: 2px;
+    }
+
+    .stage-container {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
     }
 
     .content-body {

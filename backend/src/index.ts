@@ -96,6 +96,14 @@ app.get('/api/jokes', async (c) => {
 // 2. GET /api/jokes/:id/audio — retrieve joke audio
 app.get('/api/jokes/:id/audio', async (c) => {
   const id = c.req.param('id');
+  const cache = caches.default;
+  const cacheKey = c.req.raw;
+
+  const cachedResponse = await cache.match(cacheKey);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
   const result: any = await c.env.DB.prepare('SELECT audio_data FROM jokes WHERE id = ?').bind(id).first();
   if (!result || !result.audio_data) {
     return c.text('Audio not found', 404);
@@ -107,9 +115,16 @@ app.get('/api/jokes/:id/audio', async (c) => {
   if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
     contentType = 'audio/webm';
   }
-  return new Response(buffer, {
-    headers: { 'Content-Type': contentType }
+
+  const response = new Response(buffer, {
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000, immutable'
+    }
   });
+
+  c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
 });
 
 // 2.5. POST /api/tts — Direct TTS endpoint utilizing Cloudflare Workers AI

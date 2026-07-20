@@ -1,51 +1,15 @@
-# Heckler Memory Persistence Logbook
+# Cognitive Logbook & Telemetry Anchor
 
-## Session State
-- Date: 2026-07-10
-- Pivot: Online Comedy Club
-- Objective: Replace standard text/voting board with dynamic audio showroom, voice recordings, co-listening rooms, playlists, and profiles.
+## Session Summary
+- Starting restructuring of the main page (`Feed.razor` -> `/`) to provide a mobile-first Comedy Club experience.
+- The redesign consolidates pages/features based on `odo_response_9.md`.
 
-## Timeline of Modifications
-1. **D1 Migration (`backend/migrations/0002_club_pivot.sql`)**:
-   - Added BLOB columns `audio_data` to `jokes` and `heckles`.
-   - Initialized schemas for `lineups`, `lineup_jokes`, `club_rooms`, `room_reactions`, `comedians`, and `follows`.
-2. **Wrangler Routing Configuration (`wrangler.toml`)**:
-   - Cleaned up assets config: removed wildcard `include`/`exclude` interceptors, letting standard Hono router capture `/api/*` routes before falling back to static frontend pages.
-3. **Backend Revamp (`backend/src/index.ts`)**:
-   - Implemented multipart body parsing for voice clip binary uploads.
-   - Built D1 retrieval endpoint for audio streams.
-   - Wired up Cloudflare AI Gateway endpoint `/api/club/generate-set` utilizing Llama-3 completions with edge caching to protect free-tier limits.
-   - Created full CRUD controllers for playlists, rooms, reactions, and comedian profiles.
-4. **JS Audio Interop (`wwwroot/js/audio.js`)**:
-   - Created browser microphone recording wrappers using `MediaRecorder`.
-   - Added Web Audio API synthesizer oscillators to generate sound effects (laughter, boos, claps) on the fly without heavy asset requests.
-   - Built `speakText` parser for processing `[PAUSE]` delimiters.
-5. **Blazor Page UI Overhaul**:
-   - `Feed.razor`: Dynamic showroom player running playlists and categories continuously.
-   - `Submit.razor`: Mic recording suite capturing and encoding binary inputs to D1.
-   - `Lineups.razor`: C# playlist generator.
-   - `Rooms.razor`: Synchronized tables with real-time reaction soundboards.
-   - `ComedianProfile.razor`: Comic material catalog and follow manager.
-
-## Verification & Compilation
-- Applied D1 migrations locally (`wrangler d1 migrations apply heckler-ledger --local`).
-- Backend TypeScript validated (`npx tsc --noEmit` -> Success).
-- Frontend C# validated (`dotnet build` -> Success).
-- 2026-07-10T15:03:34: Conducted UI/UX evaluation via browser subagent. Generated Heckler_UI_UX_Audit.md artifact with findings on ZLA app aesthetics, responsiveness, and user journey, and recorded recommendations for polish.
-- 2026-07-10T15:07:17: Updated Heckler_UI_UX_Audit.md with deep dive into user flow friction (clicks/scrolls) and conceptualized the Hostess/Stage inverted entry flow.
-- 2026-07-10T15:10:41: Corrected UI/UX audit and prompt generation to properly classify Heckler as a Hybrid layout (Blazor WASM + Cloudflare Workers/D1) rather than a pure ZLA app.
-
-## Session State - 2026-07-20
-- Pivot: Autonomous Comedian Syndicate
-- Objective: Integrate stateful comedian actors using Durable Objects, Workers AI MeloTTS text-to-speech engine, and simplify audience feedback to a chat table.
-- Applied D1 migrations for `audience_chat` table.
-- Bound and implemented `ComedianDO` with text joke generation (Llama) and TTS translation (MeloTTS), saving voice buffers to D1.
-- Updated Hono routing in `backend/src/index.ts` with chat feedback endpoints and DO triggers.
-- Verified compilation and local schema state.
-- Generated and implemented frontend changes via OrchestratorDO:
-  - Created `ChatMessageModel.cs` in `Heckler.Frontend.Models`.
-  - Expanded `HecklerApi.cs` with chat fetch/post and DO triggering.
-  - Implemented real-time polling layout and chat dialog in `Feed.razor`.
-- Executed `dotnet build` successfully on the Blazor WebAssembly frontend.
-
-
+## Tasks & Planned Actions
+1. **Understand models**: View Comedian and Joke models.
+2. **Design mobile-first layout**:
+    - **Lobby/Onboarding Header**: Intro to active comedian + quick stats (e.g. followers, style, biography, or rating).
+    - **Comedian Discovery**: Simple beautiful card deck or dropdown to choose/switch. (Mike, Sarah, Quentin).
+    - **Showroom Stage spotlight**: Audio visualizer + active joke playback with cached TTS audio streaming.
+    - **Live Chat & Reactions**: Audio reactions (laugh, clap, boo) + banter chat box integrated cleanly at the bottom.
+    - **Past Jokes Library**: List of past jokes/clips below the stage, clickable to play.
+3. **Compile and Verify**: Run `dotnet build`.

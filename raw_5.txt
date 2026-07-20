@@ -1,0 +1,135 @@
+﻿### Implementing Frontend Modifications
+#### Overview
+To implement the frontend modifications in Heckler.Frontend, we will make changes to `HecklerApi.cs` and `Feed.razor`.
+
+#### HecklerApi.cs
+// frontend/Heckler.Frontend/Services/HecklerApi.cs
+
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+public class HecklerApi
+{
+    private readonly HttpClient _httpClient;
+
+    public HecklerApi(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    // Existing methods...
+
+    public class ChatMessageModel
+    {
+        public int Id { get; set; }
+        public string Username { get; set; }
+        public string Message { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public async Task<List<ChatMessageModel>> GetChatMessagesAsync()
+    {
+        var response = await _httpClient.GetAsync("/api/chat");
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<List<ChatMessageModel>>(json);
+    }
+
+    public async Task<bool> SendChatMessageAsync(string username, string message)
+    {
+        var chatMessage = new ChatMessageModel { Username = username, Message = message };
+        var json = JsonSerializer.Serialize(chatMessage);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync("/api/chat", content);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> TriggerComedianAsync(string username)
+    {
+        var response = await _httpClient.GetAsync($"/api/comedian/{username}/trigger");
+        return response.IsSuccessStatusCode;
+    }
+}
+
+#### Feed.razor
+// frontend/Heckler.Frontend/Pages/Feed.razor
+
+@page "/feed"
+@using Heckler.Frontend.Services
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Joke streaming and playback UI -->
+            <h1>Heckler Feed</h1>
+            <ul>
+                @foreach (var joke in Jokes)
+                {
+                    <li>
+                        <h2>@joke.Title</h2>
+                        <p>@joke.Text</p>
+                        @if (joke.AudioUrl != null)
+                        {
+                            <audio controls>
+                                <source src="@joke.AudioUrl" type="audio/wav">
+                                Your browser does not support the audio element.
+                            </audio>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <!-- Chat pane / audience feedback sidebar -->
+            <h2>Audience Chat</h2>
+            <ul id="chat-messages">
+                @foreach (var chatMessage in ChatMessages)
+                {
+                    <li>
+                        <span>@chatMessage.Username:</span>
+                        <span>@chatMessage.Message</span>
+                    </li>
+                }
+            </ul>
+            <input id="chat-input" type="text" placeholder="Type a message..." />
+            <button id="send-chat-button" @onclick="SendChatMessage">Send</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<HecklerApi.ChatMessageModel> ChatMessages = new List<HecklerApi.ChatMessageModel>();
+    private List<JokeModel> Jokes = new List<JokeModel>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await PollChatMessages();
+        }
+    }
+
+    private async Task PollChatMessages()
+    {
+        while (true)
+        {
+            ChatMessages = await HecklerApiInstance.GetChatMessagesAsync();
+            StateHasChanged();
+            await Task.Delay(5000); // Poll every 5 seconds
+        }
+    }
+
+    private async Task SendChatMessage()
+    {
+        var chatInput = document.GetElementById("chat-input");
+        var message = chatInput.Value.ToString();
+        await HecklerApiInstance.SendChatMessageAsync("username", message);
+        chatInput.Value = "";
+    }
+
+    private HecklerApi HecklerApiInstance { get; set; } = new HecklerApi(new HttpClient());
+}
+Note that you will need to inject the `HecklerApi` instance into the `Feed` component, and also implement the `JokeModel` class and the `HecklerApiInstance` initialization. Additionally, you may need to modify the CSS styles to fit your desired layout.
