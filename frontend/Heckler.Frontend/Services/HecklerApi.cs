@@ -239,11 +239,22 @@ namespace Heckler.Frontend.Services
                 var response = await _http.PostAsync($"api/comedians/{username}/trigger", null);
                 return response.IsSuccessStatusCode;
             }
+        // --- AI COMEDY SHOW GENERATOR ---
+        public async Task<JokeModel?> GenerateShowAsync(string topic = "general")
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/jokes/generate", new { topic });
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<JokeModel>();
+                }
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error triggering comedian: {ex.Message}");
-                return false;
+                Console.WriteLine($"Error generating show: {ex.Message}");
             }
+            return null;
         }
     }
 }

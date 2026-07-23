@@ -1,603 +1,309 @@
 @page "/"
-@implements IDisposable
 @inject HecklerApi Api
-@inject IdentityService Identity
-@inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<div class="mobile-app-container">
-    <!-- Header/Lobby introducing the active comedian & stats -->
-    <header class="lobby-header glass-panel">
-        <div class="lobby-badge">
-            <span class="live-pulse"></span> LIVE COMEDY SHOWROOM
-        </div>
-        <h2 class="neon-text">🎭 @selectedComedian's Lounge</h2>
-        <div class="lobby-stats">
-            <span>👥 1.2K active listeners</span>
-            <span>⭐ Comedian DO Syndicate</span>
-        </div>
+<div class="heckler-container">
+    <!-- Header -->
+    <header class="app-header glass-panel">
+        <h2 class="neon-text">🎭 Heckler Comedy Lounge</h2>
+        <p class="subtitle">Fresh Stand-Up Comedy on Demand</p>
     </header>
 
-    <!-- Comedian Discovery Widget: simple beautiful horizontal card selector -->
-    <section class="comedian-discovery glass-panel">
-        <h4 style="margin-top: 0; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">Discover Comedians</h4>
-        <div class="comedian-selector-row">
-            @foreach (var comedian in syndicateList)
-            {
-                <button class="comedian-pill @(selectedComedian == comedian ? "active" : "")" @onclick="() => SelectComedian(comedian)">
-                    @@@comedian
+    <div class="main-layout">
+        <!-- Catalog of Comedy Shows (Left) -->
+        <section class="catalog-panel glass-panel">
+            <div class="panel-header">
+                <h4>📜 Comedy Shows Catalog</h4>
+                <button class="btn-premium" @onclick="GenerateNewShow" disabled="@isGenerating">
+                    @((isGenerating) ? "Generating..." : "✨ Generate New Show")
                 </button>
-            }
-        </div>
-        <div class="cue-action">
-            <button class="btn-premium" @onclick="() => CueComedian(selectedComedian)" disabled="@aiGenerating" style="width: 100%; margin-top: 0.5rem;">
-                @((aiGenerating) ? "Cueing Show..." : "Cue Comedian Set 🎭")
-            </button>
-        </div>
-    </section>
-
-    <!-- Showroom Stage spotlight player -->
-    <section class="stage-player glass-panel glow-border">
-        <div class="spotlight" style="background: radial-gradient(circle, @(isPlaying ? "rgba(139, 92, 246, 0.16)" : "rgba(255, 179, 71, 0.05)") 0%, transparent 70%);"></div>
-        @if (activeJoke != null)
-        {
-            <div class="stage-content" style="z-index: 2;">
-                <span class="comedian-name">@@@activeJoke.AuthorName</span>
-                <p class="joke-text">“@activeJoke.Text”</p>
-                <div class="delivery-badge">
-                    @(activeJoke.HasAudio ? "🎙️ Edge-Synthesized Voice Audio" : "🤖 TTS Default Synthesizer")
-                </div>
-                <div class="visualizer @(isPlaying ? "active" : "")">
-                    <div class="visualizer-bar"></div>
-                    <div class="visualizer-bar"></div>
-                    <div class="visualizer-bar"></div>
-                    <div class="visualizer-bar"></div>
-                    <div class="visualizer-bar"></div>
-                </div>
             </div>
-        }
-        else if (aiGenerating)
-        {
-            <div class="skeleton-wrapper" style="width: 100%; max-width: 400px; z-index: 2;">
-                <div class="skeleton-box skeleton-title" style="margin-bottom: 0.5rem; height: 1.5rem;"></div>
-                <div class="skeleton-box skeleton-text" style="width: 100%; height: 1rem;"></div>
-                <div class="skeleton-box skeleton-text" style="width: 80%; margin: 0.5rem auto; height: 1rem;"></div>
-            </div>
-        }
-        else
-        {
-            <div class="empty-stage" style="z-index: 2;">
-                <div style="font-size: 3.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 0 12px rgba(255, 179, 71, 0.3));">🎙️</div>
-                <h3 class="neon-text">Take a Seat</h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">Select an autonomous comedian above and cue their live set.</p>
-            </div>
-        }
-    </section>
-
-    <!-- Controls & Pace -->
-    <section class="player-controls glass-panel">
-        <div class="controls-row">
-            @if (isPlaying)
-            {
-                <button class="btn-premium btn-danger" @onclick="PauseSet">⏸️ Pause Set</button>
-            }
-            else
-            {
-                <button class="btn-premium" @onclick="PlaySet" disabled="@(jokeQueue.Count == 0 && string.IsNullOrEmpty(aiSetText))">▶️ Play Set</button>
-            }
-            <button class="btn-premium btn-ghost" @onclick="NextJoke" disabled="@(jokeQueue.Count <= 1 && string.IsNullOrEmpty(aiSetText))">⏭️ Next</button>
-        </div>
-        <div class="pace-selector">
-            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
-                <span>Delivery Pace</span>
-                <span>@deliveryRate.ToString("F1")x</span>
-            </div>
-            <input type="range" min="0.6" max="1.6" step="0.1" @bind="deliveryRate" style="width: 100%; accent-color: var(--neon-purple);" />
-        </div>
-    </section>
-
-    <!-- Audience Chat and Soundboard -->
-    <section class="audience-section glass-panel">
-        <h4 style="margin: 0 0 0.5rem 0; color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem;">Reactions</h4>
-        <div class="reactions-row">
-            <button class="btn-premium btn-ghost reaction-burst" @onclick='() => TriggerReaction("laugh")' style="border-color: var(--neon-green); color: var(--neon-green);">😂 Laugh</button>
-            <button class="btn-premium btn-ghost reaction-burst" @onclick='() => TriggerReaction("clap")' style="border-color: var(--neon-blue); color: var(--neon-blue);">👏 Clap</button>
-            <button class="btn-premium btn-ghost reaction-burst" @onclick='() => TriggerReaction("boo")' style="border-color: var(--neon-red); color: var(--neon-red);">🍅 Boo</button>
-        </div>
-
-        <h4 style="margin: 1.25rem 0 0.5rem 0; color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem;">Lobby Banter</h4>
-        <div class="chat-display scroll-panel">
-            @if (chatMessages.Count == 0)
-            {
-                <div class="chat-placeholder">Bar is quiet. Banter now!</div>
-            }
-            else
-            {
-                @foreach (var msg in chatMessages.Take(15))
+            
+            <div class="shows-list">
+                @if (shows.Count == 0 && !isLoading)
                 {
-                    <div class="chat-msg-bubble">
-                        <strong>@msg.Username</strong>: @msg.Message
-                    </div>
+                    <div class="empty-state">No comedy shows found. Click Generate New Show!</div>
                 }
-            }
-        </div>
-        <div class="chat-input-row">
-            <input type="text" @bind="chatUsername" placeholder="Name" class="form-input text-center" style="width: 75px; font-size: 0.8rem; padding: 0.4rem 0.5rem;" />
-            <input type="text" @bind="newChatMessage" @onkeyup="HandleChatKey" placeholder="Send banter..." class="form-input" style="flex: 1; font-size: 0.8rem; padding: 0.4rem 0.75rem;" />
-            <button class="btn-premium" @onclick="SendChat" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;">Send</button>
-        </div>
-    </section>
+                else
+                {
+                    @foreach (var show in shows)
+                    {
+                        <div class="show-card @(selectedShow?.Id == show.Id ? "active" : "")" @onclick="() => SelectShow(show)">
+                            <div class="show-meta">
+                                <span class="show-author">🗣️ @show.AuthorName</span>
+                                <span class="show-category">@show.Category</span>
+                            </div>
+                            <p class="show-text">“@show.Text”</p>
+                            <div class="show-badge">
+                                @(show.HasAudio ? "🎙️ MP3 Audio Available" : "🤖 Fallback TTS Audio")
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </section>
 
-    <!-- Past Jokes Library -->
-    <section class="jokes-library glass-panel">
-        <h4 style="margin-top: 0; color: var(--text-secondary); text-transform: uppercase; font-size: 0.8rem;">Show Set List</h4>
-        <div class="setlist-wrapper scroll-panel">
-            @if (jokeQueue.Count == 0)
+        <!-- Single Audio Player (Center) -->
+        <section class="player-panel glass-panel glow-border">
+            <div class="spotlight"></div>
+            @if (selectedShow != null)
             {
-                <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; margin: 1rem 0;">No jokes loaded. Cue a comedian.</p>
+                <div class="player-content">
+                    <span class="now-playing-tag">NOW PLAYING</span>
+                    <h3 class="author-title">@selectedShow.AuthorName</h3>
+                    <p class="featured-joke">“@selectedShow.Text”</p>
+                    
+                    <div class="audio-controls">
+                        @if (isPlaying)
+                        {
+                            <button class="btn-premium btn-danger" @onclick="StopAudio">⏹️ Pause</button>
+                        }
+                        else
+                        {
+                            <button class="btn-premium" @onclick="PlaySelectedShow">▶️ Play Audio</button>
+                        }
+                    </div>
+                </div>
             }
             else
             {
-                @for (int idx = 0; idx < jokeQueue.Count; idx++)
-                {
-                    var joke = jokeQueue[idx];
-                    var indexClosure = idx;
-                    <div class="setlist-item @(activeJokeIndex == idx ? "active" : "")" @onclick="() => PlaySpecificJoke(indexClosure)">
-                        <div class="setlist-idx">#@(idx + 1)</div>
-                        <div class="setlist-text">“@joke.Text”</div>
-                        <div class="setlist-hasaudio">@(joke.HasAudio ? "🎙️" : "🗣️")</div>
-                    </div>
-                }
+                <div class="player-empty">
+                    <div class="mic-icon">🎙️</div>
+                    <h3>Select a Comedy Show</h3>
+                    <p>Choose a show from the catalog on the left to start playback.</p>
+                </div>
             }
-        </div>
-    </section>
+        </section>
+    </div>
 </div>
 
 <style>
-    .mobile-app-container {
+    .heckler-container {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.5rem;
         width: 100%;
-        max-width: 480px;
+        max-width: 1000px;
         margin: 0 auto;
-        padding: 1rem;
+        padding: 1.5rem;
         box-sizing: border-box;
     }
 
-    .lobby-header {
-        padding: 1rem;
+    .app-header {
         text-align: center;
+        padding: 1.5rem;
     }
 
-    .lobby-header h2 {
-        margin: 0.25rem 0;
-        font-size: 1.5rem;
+    .app-header h2 {
+        margin: 0;
+        font-size: 2rem;
     }
 
-    .lobby-stats {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        font-size: 0.75rem;
+    .subtitle {
         color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+        font-size: 0.95rem;
     }
 
-    .comedian-discovery {
-        padding: 1rem;
+    .main-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
     }
 
-    .comedian-selector-row {
+    @media (max-width: 768px) {
+        .main-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .catalog-panel, .player-panel {
+        padding: 1.5rem;
         display: flex;
-        gap: 0.5rem;
-        overflow-x: auto;
-        padding-bottom: 0.5rem;
+        flex-direction: column;
     }
 
-    .comedian-pill {
-        background: rgba(255, 255, 255, 0.05);
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .panel-header h4 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 1.1rem;
+    }
+
+    .shows-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .show-card {
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid var(--glass-border);
-        color: var(--text-secondary);
-        padding: 0.4rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
+        border-radius: 10px;
+        padding: 1rem;
         cursor: pointer;
-        white-space: nowrap;
         transition: all 0.2s ease;
     }
 
-    .comedian-pill.active {
-        background: rgba(157, 78, 221, 0.2);
+    .show-card:hover, .show-card.active {
+        background: rgba(157, 78, 221, 0.12);
         border-color: var(--neon-purple);
-        color: #fff;
-        box-shadow: 0 0 10px rgba(157, 78, 221, 0.3);
     }
 
-    .stage-player {
-        position: relative;
-        padding: 2rem 1rem;
-        text-align: center;
-        min-height: 180px;
+    .show-meta {
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-    }
-
-    .stage-content {
-        position: relative;
-        z-index: 2;
-    }
-
-    .comedian-name {
+        justify-content: space-between;
+        font-size: 0.8rem;
         color: var(--neon-purple);
-        font-weight: 700;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
     }
 
-    .joke-text {
-        font-size: 1.25rem;
-        line-height: 1.45;
-        margin: 0.75rem 0;
+    .show-text {
+        font-size: 0.95rem;
+        line-height: 1.4;
+        margin: 0 0 0.5rem 0;
         color: var(--text-primary);
     }
 
-    .delivery-badge {
-        font-size: 0.7rem;
+    .show-badge {
+        font-size: 0.75rem;
         color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
     }
 
-    .player-controls {
-        padding: 1rem;
+    .player-panel {
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        min-height: 350px;
+        position: relative;
     }
 
-    .controls-row {
+    .now-playing-tag {
+        font-size: 0.75rem;
+        color: var(--neon-purple);
+        letter-spacing: 2px;
+        font-weight: 700;
+    }
+
+    .author-title {
+        margin: 0.5rem 0;
+        font-size: 1.5rem;
+    }
+
+    .featured-joke {
+        font-size: 1.2rem;
+        line-height: 1.5;
+        margin: 1.5rem 0;
+    }
+
+    .audio-controls {
         display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .controls-row button {
-        flex: 1;
-        padding: 0.6rem;
-        font-size: 0.9rem;
+        justify-content: center;
+        gap: 1rem;
     }
 
     .btn-danger {
-        background: rgba(255, 51, 102, 0.15);
-        border: 1px solid var(--neon-red);
+        background: rgba(255, 51, 102, 0.2);
+        border-color: var(--neon-red);
         color: var(--neon-red);
-        box-shadow: none;
     }
 
-    .audience-section {
-        padding: 1rem;
-    }
-
-    .reactions-row {
-        display: flex;
-        gap: 0.4rem;
-    }
-
-    .reactions-row button {
-        flex: 1;
-        padding: 0.5rem 0;
-        font-size: 0.75rem;
-    }
-
-    .chat-display {
-        background: rgba(0,0,0,0.2);
-        border: 1px solid var(--glass-border);
-        border-radius: 8px;
-        height: 120px;
-        overflow-y: auto;
-        padding: 0.5rem;
-        margin: 0.5rem 0;
-        font-size: 0.8rem;
-    }
-
-    .chat-placeholder {
+    .player-empty {
         color: var(--text-secondary);
+    }
+
+    .mic-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state {
         text-align: center;
-        padding-top: 2.5rem;
-    }
-
-    .chat-msg-bubble {
-        margin-bottom: 0.25rem;
-        line-height: 1.35;
-    }
-
-    .chat-input-row {
-        display: flex;
-        gap: 0.4rem;
-    }
-
-    .jokes-library {
-        padding: 1rem;
-    }
-
-    .setlist-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        max-height: 180px;
-        overflow-y: auto;
-    }
-
-    .setlist-item {
-        display: flex;
-        align-items: center;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid var(--glass-border);
-        border-radius: 8px;
-        padding: 0.5rem;
-        cursor: pointer;
-        font-size: 0.8rem;
-        transition: all 0.2s ease;
-    }
-
-    .setlist-item:hover, .setlist-item.active {
-        background: rgba(157, 78, 221, 0.1);
-        border-color: var(--neon-purple);
-    }
-
-    .setlist-idx {
-        color: var(--neon-purple);
-        font-weight: 700;
-        margin-right: 0.5rem;
-    }
-
-    .setlist-text {
-        flex: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .setlist-hasaudio {
-        margin-left: 0.5rem;
+        padding: 2rem;
+        color: var(--text-secondary);
     }
 </style>
 
 @code {
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "lineup")]
-    public string? LineupQueryId { get; set; }
-
-    private List<JokeModel> jokeQueue = new();
-    private JokeModel? activeJoke = null;
-    private int activeJokeIndex = 0;
+    private List<JokeModel> shows = new();
+    private JokeModel? selectedShow = null;
+    private bool isLoading = true;
+    private bool isGenerating = false;
     private bool isPlaying = false;
-    private float deliveryRate = 1.0f;
-    private bool aiGenerating = false;
-    private string aiSetText = "";
-
-    // Syndicate variables
-    private List<string> syndicateList = new() { "NeonMike", "SpicySarah", "QuantumQuentin" };
-    private string selectedComedian = "NeonMike";
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!string.IsNullOrEmpty(LineupQueryId))
-        {
-            var detail = await Api.GetLineupByIdAsync(LineupQueryId);
-            if (detail != null && detail.Jokes.Count > 0)
-            {
-                jokeQueue = detail.Jokes;
-                activeJokeIndex = 0;
-                activeJoke = jokeQueue[0];
-                StateHasChanged();
-                return;
-            }
-        }
-        await CueComedian(selectedComedian);
-    }
-
-    private void SelectComedian(string comedian)
-    {
-        selectedComedian = comedian;
-        StateHasChanged();
-    }
-
-    private async Task CueComedian(string comedianName)
-    {
-        await JS.InvokeVoidAsync("audioInterop.unlockAudio");
-        await CancelPlayback();
-        aiGenerating = true;
-        StateHasChanged();
-
-        // Trigger the ComedianDO to generate and save a joke with TTS audio
-        var triggered = await Api.TriggerComedianAsync(comedianName);
-        if (triggered)
-        {
-            // Load latest jokes from this comedian
-            jokeQueue = await Api.GetFeedAsync("new", 0, null);
-            // Filter queue to this comedian
-            jokeQueue = jokeQueue.Where(j => j.AuthorName.Equals(comedianName, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            if (jokeQueue.Count > 0)
-            {
-                activeJokeIndex = 0;
-                activeJoke = jokeQueue[0];
-            }
-        }
-
-        aiGenerating = false;
-        StateHasChanged();
-        if (activeJoke != null)
-        {
-            await PlaySet();
-        }
-    }
-
-    private async Task LoadCategorySet(string category)
-    {
-        await CancelPlayback();
-        aiSetText = "";
-        
-        jokeQueue = await Api.GetFeedAsync("random", 0, category);
-        
-        activeJokeIndex = 0;
-        if (jokeQueue.Count > 0)
-        {
-            activeJoke = jokeQueue[0];
-        }
-        else
-        {
-            activeJoke = null;
-        }
-        StateHasChanged();
-    }
-
-    private async Task PlaySpecificJoke(int index)
-    {
-        await CancelPlayback();
-        activeJokeIndex = index;
-        activeJoke = jokeQueue[activeJokeIndex];
-        StateHasChanged();
-        await PlaySet();
-    }
-
-    private async Task PlaySet()
-    {
-        await JS.InvokeVoidAsync("audioInterop.unlockAudio");
-        if (activeJoke == null && string.IsNullOrEmpty(aiSetText)) return;
-        isPlaying = true;
-        StateHasChanged();
-
-        if (!string.IsNullOrEmpty(aiSetText))
-        {
-            await JS.InvokeVoidAsync("audioInterop.speakText", aiSetText, deliveryRate);
-            isPlaying = false;
-            aiSetText = "";
-            activeJoke = null;
-            StateHasChanged();
-            return;
-        }
-
-        while (isPlaying && activeJokeIndex < jokeQueue.Count)
-        {
-            activeJoke = jokeQueue[activeJokeIndex];
-            StateHasChanged();
-
-            if (activeJoke.HasAudio)
-            {
-                var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
-                var audioUrl = $"{baseAddr}api/jokes/{activeJoke.Id}/audio";
-                var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
-                if (!played)
-                {
-                    await JS.InvokeVoidAsync("audioInterop.speakText", activeJoke.Text, deliveryRate);
-                }
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("audioInterop.speakText", activeJoke.Text, deliveryRate);
-            }
-
-            if (!isPlaying) break;
-
-            activeJokeIndex++;
-            if (activeJokeIndex >= jokeQueue.Count)
-            {
-                isPlaying = false;
-                activeJoke = null;
-                break;
-            }
-        }
-        StateHasChanged();
-    }
-
-    private async Task PauseSet()
-    {
-        isPlaying = false;
-        await JS.InvokeVoidAsync("audioInterop.cancelSpeech");
-        StateHasChanged();
-    }
-
-    private async Task CancelPlayback()
-    {
-        isPlaying = false;
-        await JS.InvokeVoidAsync("audioInterop.cancelSpeech");
-    }
-
-    private async Task NextJoke()
-    {
-        if (!string.IsNullOrEmpty(aiSetText))
-        {
-            await CancelPlayback();
-            aiSetText = "";
-            activeJoke = null;
-            StateHasChanged();
-            return;
-        }
-
-        await CancelPlayback();
-        if (activeJokeIndex < jokeQueue.Count - 1)
-        {
-            activeJokeIndex++;
-            activeJoke = jokeQueue[activeJokeIndex];
-            StateHasChanged();
-            await PlaySet();
-        }
-    }
-
-    private void TriggerReaction(string type)
-    {
-        _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", type);
-    }
-
-    private List<ChatMessageModel> chatMessages = new();
-    private string chatUsername = "AudienceMember";
-    private string newChatMessage = "";
-    private System.Threading.Timer? chatPollTimer;
 
     protected override async Task OnInitializedAsync()
     {
-        var storedUsername = await Identity.GetUsernameAsync();
-        if (!string.IsNullOrEmpty(storedUsername))
-        {
-            chatUsername = storedUsername;
-        }
-
-        chatPollTimer = new System.Threading.Timer(async _ =>
-        {
-            await InvokeAsync(async () =>
-            {
-                chatMessages = await Api.GetChatMessagesAsync();
-                StateHasChanged();
-            });
-        }, null, 0, 5000);
+        await LoadShowsAsync();
     }
 
-    private async Task SendChat()
+    private async Task LoadShowsAsync()
     {
-        if (string.IsNullOrWhiteSpace(newChatMessage)) return;
-        var sent = await Api.SendChatMessageAsync(chatUsername, newChatMessage);
-        if (sent)
+        isLoading = true;
+        shows = await Api.GetFeedAsync("new", 0, null);
+        if (shows.Count > 0 && selectedShow == null)
         {
-            newChatMessage = "";
-            chatMessages = await Api.GetChatMessagesAsync();
-            StateHasChanged();
+            selectedShow = shows[0];
         }
+        isLoading = false;
+        StateHasChanged();
     }
 
-    private async Task HandleChatKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    private void SelectShow(JokeModel show)
     {
-        if (e.Key == "Enter")
-        {
-            await SendChat();
-        }
+        selectedShow = show;
+        isPlaying = false;
+        StateHasChanged();
     }
 
-    public void Dispose()
+    private async Task GenerateNewShow()
     {
-        chatPollTimer?.Dispose();
+        isGenerating = true;
+        StateHasChanged();
+
+        var newShow = await Api.GenerateShowAsync("standup comedy");
+        if (newShow != null)
+        {
+            shows.Insert(0, newShow);
+            selectedShow = newShow;
+        }
+
+        isGenerating = false;
+        StateHasChanged();
+    }
+
+    private async Task PlaySelectedShow()
+    {
+        if (selectedShow == null) return;
+        await JS.InvokeVoidAsync("audioInterop.unlockAudio");
+        isPlaying = true;
+        StateHasChanged();
+
+        // Endpoint URL for clean MP3 audio stream
+        var audioUrl = $"api/jokes/{selectedShow.Id}/audio";
+        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
+
+        if (!played)
+        {
+            // Fallback to streaming /api/tts directly over HTML5 Audio
+            await JS.InvokeAsync<bool>("audioInterop.speakText", selectedShow.Text);
+        }
+
+        isPlaying = false;
+        StateHasChanged();
+    }
+
+    private void StopAudio()
+    {
+        isPlaying = false;
+        StateHasChanged();
     }
 }
