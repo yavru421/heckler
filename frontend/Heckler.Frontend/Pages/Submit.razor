@@ -2,12 +2,11 @@
 @inject HecklerApi Api
 @inject IdentityService Identity
 @inject NavigationManager Nav
-@inject IJSRuntime JS
 
 <div class="heckler-app">
     <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
         <div class="logo">
-            <h1>MIC RECORDING <span class="neon-text">BOOTH</span></h1>
+            <h1>SUBMIT A <span class="neon-text">JOKE</span></h1>
         </div>
     </header>
 
@@ -18,8 +17,8 @@
                 <div style="text-align: center; padding: 2rem 0;">
                     <div style="font-size: 4rem; margin-bottom: 1rem;">🎤</div>
                     <h2 style="color: var(--neon-green); margin-bottom: 1rem;">Your Set is Recorded!</h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Your voice clip and joke are live in the club catalog.</p>
-                    <button id="btn-view-feed" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/feed")'>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">Your joke is live in the club catalog.</p>
+                    <button id="btn-view-feed" class="btn-generate haptic-btn" @onclick='() => Nav.NavigateTo("/")'>
                         📜 Enter the Showroom
                     </button>
                 </div>
@@ -50,50 +49,16 @@
 
                 <!-- Joke Text -->
                 <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-family: 'Oswald', sans-serif;">Joke Transcript (Optional, helps TTS fallback)</label>
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-family: 'Oswald', sans-serif;">Joke Text</label>
                     <textarea id="input-joke-text" @bind="jokeText" placeholder="Write your joke transcript here..." rows="4"
                         style="width: 100%; padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.5); color: white; font-size: 1.05rem; font-family: 'Inter', sans-serif; resize: vertical; line-height: 1.6; box-sizing: border-box;"></textarea>
                     <div style="text-align: right; font-size: 0.75rem; color: @(jokeText.Length > 450 ? "var(--neon-red)" : "var(--text-secondary)"); margin-top: 0.3rem;">@jokeText.Length / 500</div>
                 </div>
 
-                <!-- Microphone Recording Interface -->
-                <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem; border-color: rgba(255,255,255,0.06); text-align: center;">
-                    <label style="display: block; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; font-family: 'Oswald', sans-serif;">🎙️ Record your voice</label>
-                    
-                    <div style="display: flex; justify-content: center; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-                        @if (!isRecording)
-                        {
-                            <button class="haptic-btn" @onclick="StartVoiceRecording" style="width: 70px; height: 70px; border-radius: 50%; border: none; background: var(--neon-red); color: white; font-size: 1.8rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px var(--neon-red);">🎙️</button>
-                        }
-                        else
-                        {
-                            <button class="haptic-btn" @onclick="StopVoiceRecording" style="width: 70px; height: 70px; border-radius: 50%; border: none; background: var(--neon-purple); color: white; font-size: 1.8rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px var(--neon-purple); animation: pulseGlow 1.5s infinite;">⏹️</button>
-                        }
-                    </div>
-
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                        @if (isRecording)
-                        {
-                            <span style="color: var(--neon-red); font-weight: bold;">RECORDING IN PROGRESS...</span>
-                        }
-                        else if (!string.IsNullOrEmpty(audioBase64))
-                        {
-                            <span style="color: var(--neon-green); font-weight: bold;">✓ VOICE CLIP CAPTURED (Ready)</span>
-                            <div style="margin-top: 0.5rem;">
-                                <button class="haptic-btn" @onclick="PlayRecordedAudio" style="padding: 0.3rem 1rem; border-radius: 4px; border: 1px solid var(--neon-blue); background: transparent; color: var(--neon-blue); font-size: 0.8rem;">▶ Check Audio</button>
-                            </div>
-                        }
-                        else
-                        {
-                            <span>Click microphone to record your comedy delivery</span>
-                        }
-                    </div>
-                </div>
-
                 <!-- Submit -->
                 <button id="btn-submit-joke" class="btn-generate haptic-btn" @onclick="SubmitJoke" disabled="@isSubmitting"
                     style="width: 100%; padding: 1.3rem; font-size: 1.15rem; background: linear-gradient(135deg, var(--neon-red), var(--neon-purple)); box-shadow: 0 4px 20px rgba(255, 51, 102, 0.3);">
-                    @(isSubmitting ? "STORING AUDIO..." : "PUBLISH TO SHOWROOM 🎤")
+                    @(isSubmitting ? "PUBLISHING..." : "PUBLISH TO SHOWROOM 🎤")
                 </button>
 
                 @if (!string.IsNullOrEmpty(errorMsg))
@@ -113,10 +78,6 @@
     private bool isSubmitted = false;
     private string errorMsg = "";
 
-    // Recording State
-    private bool isRecording = false;
-    private string? audioBase64 = null;
-
     private Dictionary<string, string> categories = new()
     {
         { "observational", "👀 Observational" },
@@ -133,36 +94,6 @@
         if (!string.IsNullOrEmpty(savedName)) username = savedName;
     }
 
-    private async Task StartVoiceRecording()
-    {
-        errorMsg = "";
-        var success = await JS.InvokeAsync<bool>("audioInterop.startRecording");
-        if (success)
-        {
-            isRecording = true;
-            audioBase64 = null;
-        }
-        else
-        {
-            errorMsg = "Microphone access denied or failed.";
-        }
-        StateHasChanged();
-    }
-
-    private async Task StopVoiceRecording()
-    {
-        isRecording = false;
-        audioBase64 = await JS.InvokeAsync<string>("audioInterop.stopRecording");
-        StateHasChanged();
-    }
-
-    private async Task PlayRecordedAudio()
-    {
-        if (string.IsNullOrEmpty(audioBase64)) return;
-        var dataUrl = $"data:audio/webm;base64,{audioBase64}";
-        await JS.InvokeVoidAsync("audioInterop.playAudioUrl", dataUrl);
-    }
-
     private async Task SubmitJoke()
     {
         errorMsg = "";
@@ -172,10 +103,9 @@
             return;
         }
         
-        // Either text or audio must be provided
-        if (string.IsNullOrWhiteSpace(jokeText) && string.IsNullOrEmpty(audioBase64))
+        if (string.IsNullOrWhiteSpace(jokeText))
         {
-            errorMsg = "Must record your voice or write a transcript to publish.";
+            errorMsg = "Write a joke transcript to publish.";
             return;
         }
 
@@ -185,21 +115,12 @@
             return;
         }
 
-        // Fill placeholder text if only audio is provided
-        if (string.IsNullOrWhiteSpace(jokeText))
-        {
-            jokeText = "Live Mic Audio Clip";
-        }
-
         isSubmitting = true;
         StateHasChanged();
 
         await Identity.SetUsernameAsync(username);
-        
-        // Lazy register comedian profile if it doesn't exist
-        _ = Api.GetComedianProfileAsync(username);
 
-        var result = await Api.SubmitJokeAsync(jokeText, username, selectedCategory, audioBase64);
+        var result = await Api.SubmitJokeAsync(jokeText, username, selectedCategory, null);
 
         isSubmitting = false;
         if (result != null)
@@ -208,7 +129,7 @@
         }
         else
         {
-            errorMsg = "Failed to upload your recording. Try again.";
+            errorMsg = "Failed to upload your joke. Try again.";
         }
         StateHasChanged();
     }

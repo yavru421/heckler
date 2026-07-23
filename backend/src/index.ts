@@ -5,7 +5,10 @@ export interface Env {
   DB: D1Database;
   ASSETS: any;
   AI: any;
+  COMEDIAN_DO: DurableObjectNamespace;
 }
+
+export { ComedianDO } from './comedian_do';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -16,7 +19,7 @@ app.use('/*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
 });
 
-// 1. GET /api/jokes — List comedy shows/sets
+// 1. GET /api/jokes — List comedy sets stored in D1
 app.get('/api/jokes', async (c) => {
   const { results: jokes } = await c.env.DB.prepare(
     'SELECT id, text, category, author_name, kills, bombs, created_at, (audio_data IS NOT NULL AND length(audio_data) > 0) as has_audio FROM jokes WHERE is_ghosted = 0 ORDER BY created_at DESC LIMIT 50'
@@ -36,7 +39,7 @@ app.get('/api/jokes', async (c) => {
   return c.json(mappedJokes);
 });
 
-// 2. GET /api/jokes/:id/audio — Stream MP3 audio cleanly
+// 2. GET /api/jokes/:id/audio — Stream stored MP3 audio cleanly
 app.get('/api/jokes/:id/audio', async (c) => {
   const id = c.req.param('id');
   const result: any = await c.env.DB.prepare('SELECT audio_data FROM jokes WHERE id = ?').bind(id).first();
@@ -63,108 +66,38 @@ app.get('/api/jokes/:id/audio', async (c) => {
   });
 });
 
-// 3. POST /api/tts — Direct fallback audio stream over HTML5 Audio
+// 3. POST /api/comedians/:username/trigger — Direct ComedianDO generation
+app.post('/api/comedians/:username/trigger', async (c) => {
+  const username = c.req.param('username');
+  const id = c.env.COMEDIAN_DO.idFromName(username);
+  const stub = c.env.COMEDIAN_DO.get(id);
+  const url = new URL(c.req.url);
+  url.pathname = `/trigger`;
+  url.searchParams.set('username', username);
+  return stub.fetch(new Request(url.toString(), { method: 'POST' }));
+});
+
+// 4. POST /api/tts — Direct TTS endpoint fallback
 app.post('/api/tts', async (c) => {
   try {
     const body = await c.req.json();
     const text = body.text;
-    if (!text) {
-      return c.text('Text is required', 400);
-    }
+    if (!text) return c.text('Text is required', 400);
 
-    const cleanText = text
-      .replace(/\[PAUSE\]/gi, " ")
-      .replace(/[#*$_[\](){}]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    try {
-      const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
-        text: cleanText,
-        speaker: 'orion'
-      }, { returnRawResponse: true });
-      
-      if (ttsResponse.ok) {
-        const audioBuffer = await ttsResponse.arrayBuffer();
-        if (audioBuffer.byteLength > 500) {
-          return new Response(audioBuffer, {
-            headers: {
-              'Content-Type': 'audio/mpeg',
-              'Access-Control-Allow-Origin': '*'
-            }
-          });
-        }
+    const cleanText = text.replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ").replace(/[#*$_[\](){}]/g, "").replace(/\s+/g, " ").trim();
+    const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", { text: cleanText, speaker: 'orion' }, { returnRawResponse: true });
+    
+    if (ttsResponse.ok) {
+      const audioBuffer = await ttsResponse.arrayBuffer();
+      if (audioBuffer.byteLength > 500) {
+        return new Response(audioBuffer, {
+          headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' }
+        });
       }
-    } catch (e) {
-      console.warn("Aura-1 TTS failed:", e);
     }
-
     return c.text('TTS Generation Failed', 500);
   } catch (err: any) {
     return c.text(`TTS Generation Error: ${err.message}`, 500);
-  }
-});
-
-// 4. POST /api/jokes/generate — Produce a fresh comedy show set on demand using Llama 3.1 & Aura-1
-app.post('/api/jokes/generate', async (c) => {
-  try {
-    let topic = 'everyday life';
-    try {
-      const body = await c.req.json();
-      if (body && body.topic) topic = body.topic;
-    } catch (e) {}
-
-    const llamaResponse = await c.env.AI.run(
-      '@cf/meta/llama-3.1-8b-instruct',
-      {
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a hilarious stand-up comedian. Write a short, punchy, hilarious 2-sentence stand-up joke. Make it clever and extremely funny.'
-          },
-          {
-            role: 'user',
-            content: `Write a stand-up joke about ${topic}.`
-          }
-        ]
-      }
-    );
-
-    const jokeText = (llamaResponse as any).response || `Why did the programmer switch to clean architecture? Because complex state synchronization was giving them headaches!`;
-
-    // Synthesize audio using Aura-1
-    let audioBuffer: ArrayBuffer | null = null;
-    try {
-      const cleanText = jokeText.replace(/[#*$_[\](){}]/g, "").trim();
-      const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
-        text: cleanText,
-        speaker: 'orion'
-      }, { returnRawResponse: true });
-
-      if (ttsResponse.ok) {
-        audioBuffer = await ttsResponse.arrayBuffer();
-      }
-    } catch (ttsErr) {
-      console.warn('Aura-1 audio generation failed during show creation:', ttsErr);
-    }
-
-    const id = crypto.randomUUID();
-    const comedianNames = ['Dave Light', 'Sarah Spark', 'Max Chuckle', 'Luna Laughs', 'RoboComedian'];
-    const authorName = comedianNames[Math.floor(Math.random() * comedianNames.length)];
-
-    await c.env.DB.prepare(
-      'INSERT INTO jokes (id, text, category, author_name, audio_data) VALUES (?, ?, ?, ?, ?)'
-    ).bind(id, jokeText, topic, authorName, audioBuffer).run();
-
-    return c.json({
-      id,
-      text: jokeText,
-      category: topic,
-      author_name: authorName,
-      has_audio: Boolean(audioBuffer && audioBuffer.byteLength > 0)
-    });
-  } catch (err: any) {
-    return c.json({ error: `Show generation failed: ${err.message}` }, 500);
   }
 });
 

@@ -3,54 +3,52 @@
 @inject IJSRuntime JS
 
 <div class="heckler-container">
-    <!-- Header -->
     <header class="app-header glass-panel">
-        <h2 class="neon-text">🎭 Heckler Comedy Lounge</h2>
-        <p class="subtitle">Fresh Stand-Up Comedy on Demand</p>
+        <h2 class="neon-text">🎭 Heckler Comedian Lounge</h2>
+        <p class="subtitle">Select a comedian to trigger their Durable Object AI set</p>
     </header>
 
     <div class="main-layout">
-        <!-- Catalog of Comedy Shows (Left) -->
+        <!-- Comedian Lobby (Left) -->
         <section class="catalog-panel glass-panel">
             <div class="panel-header">
-                <h4>📜 Comedy Shows Catalog</h4>
-                <button class="btn-premium" @onclick="GenerateNewShow" disabled="@isGenerating">
-                    @((isGenerating) ? "Generating..." : "✨ Generate New Show")
-                </button>
+                <h4>🎙️ Autonomous Comedians</h4>
             </div>
             
-            <div class="shows-list">
-                @if (shows.Count == 0 && !isLoading)
+            <div class="comedian-list">
+                @foreach (var comedian in syndicateList)
                 {
-                    <div class="empty-state">No comedy shows found. Click Generate New Show!</div>
+                    <div class="comedian-card @(selectedComedian == comedian ? "active" : "")" @onclick="() => SelectComedian(comedian)">
+                        <span class="comedian-name">🗣️ @comedian</span>
+                        <button class="btn-premium" @onclick="() => CueComedian(comedian)" disabled="@isGenerating" style="margin-top: 0.5rem; width: 100%;">
+                            @((isGenerating && selectedComedian == comedian) ? "Generating Set..." : "Trigger AI Set 🎭")
+                        </button>
+                    </div>
                 }
-                else
+            </div>
+
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">📜 Saved Jokes Catalog</h4>
+            <div class="shows-list scroll-panel">
+                @foreach (var joke in shows)
                 {
-                    @foreach (var show in shows)
-                    {
-                        <div class="show-card @(selectedShow?.Id == show.Id ? "active" : "")" @onclick="() => SelectShow(show)">
-                            <div class="show-meta">
-                                <span class="show-author">🗣️ @show.AuthorName</span>
-                                <span class="show-category">@show.Category</span>
-                            </div>
-                            <p class="show-text">“@show.Text”</p>
-                            <div class="show-badge">
-                                @(show.HasAudio ? "🎙️ MP3 Audio Available" : "🤖 Fallback TTS Audio")
-                            </div>
+                    <div class="show-card @(selectedShow?.Id == joke.Id ? "active" : "")" @onclick="() => SelectShow(joke)">
+                        <div class="show-meta">
+                            <span>@@@joke.AuthorName</span>
+                            <span>@joke.Category</span>
                         </div>
-                    }
+                        <p class="show-text">“@joke.Text”</p>
+                    </div>
                 }
             </div>
         </section>
 
         <!-- Single Audio Player (Center) -->
         <section class="player-panel glass-panel glow-border">
-            <div class="spotlight"></div>
             @if (selectedShow != null)
             {
                 <div class="player-content">
                     <span class="now-playing-tag">NOW PLAYING</span>
-                    <h3 class="author-title">@selectedShow.AuthorName</h3>
+                    <h3 class="author-title">@@@selectedShow.AuthorName</h3>
                     <p class="featured-joke">“@selectedShow.Text”</p>
                     
                     <div class="audio-controls">
@@ -69,8 +67,8 @@
             {
                 <div class="player-empty">
                     <div class="mic-icon">🎙️</div>
-                    <h3>Select a Comedy Show</h3>
-                    <p>Choose a show from the catalog on the left to start playback.</p>
+                    <h3>Select a Comedian Set</h3>
+                    <p>Click a comedian on the left to trigger their AI set and listen.</p>
                 </div>
             }
         </section>
@@ -94,27 +92,13 @@
         padding: 1.5rem;
     }
 
-    .app-header h2 {
-        margin: 0;
-        font-size: 2rem;
-    }
-
-    .subtitle {
-        color: var(--text-secondary);
-        margin: 0.5rem 0 0 0;
-        font-size: 0.95rem;
-    }
+    .app-header h2 { margin: 0; font-size: 2rem; }
+    .subtitle { color: var(--text-secondary); margin: 0.5rem 0 0 0; }
 
     .main-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
-    }
-
-    @media (max-width: 768px) {
-        .main-layout {
-            grid-template-columns: 1fr;
-        }
     }
 
     .catalog-panel, .player-panel {
@@ -123,60 +107,57 @@
         flex-direction: column;
     }
 
-    .panel-header {
+    .comedian-list {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
+        flex-direction: column;
+        gap: 0.8rem;
     }
 
-    .panel-header h4 {
-        margin: 0;
-        color: var(--text-primary);
-        font-size: 1.1rem;
+    .comedian-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 0.8rem;
+        cursor: pointer;
+    }
+
+    .comedian-card.active {
+        border-color: var(--neon-purple);
+        background: rgba(157, 78, 221, 0.1);
     }
 
     .shows-list {
         display: flex;
         flex-direction: column;
-        gap: 0.8rem;
-        max-height: 500px;
+        gap: 0.5rem;
+        max-height: 250px;
         overflow-y: auto;
     }
 
     .show-card {
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(0, 0, 0, 0.2);
         border: 1px solid var(--glass-border);
-        border-radius: 10px;
-        padding: 1rem;
+        border-radius: 8px;
+        padding: 0.6rem;
         cursor: pointer;
-        transition: all 0.2s ease;
+        font-size: 0.85rem;
     }
 
-    .show-card:hover, .show-card.active {
-        background: rgba(157, 78, 221, 0.12);
+    .show-card.active {
         border-color: var(--neon-purple);
     }
 
     .show-meta {
         display: flex;
         justify-content: space-between;
-        font-size: 0.8rem;
         color: var(--neon-purple);
-        font-weight: 600;
-        margin-bottom: 0.4rem;
+        font-weight: bold;
+        font-size: 0.75rem;
     }
 
     .show-text {
-        font-size: 0.95rem;
-        line-height: 1.4;
-        margin: 0 0 0.5rem 0;
+        margin: 0.3rem 0 0 0;
         color: var(--text-primary);
-    }
-
-    .show-badge {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
     }
 
     .player-panel {
@@ -184,59 +165,19 @@
         align-items: center;
         text-align: center;
         min-height: 350px;
-        position: relative;
     }
 
-    .now-playing-tag {
-        font-size: 0.75rem;
-        color: var(--neon-purple);
-        letter-spacing: 2px;
-        font-weight: 700;
-    }
-
-    .author-title {
-        margin: 0.5rem 0;
-        font-size: 1.5rem;
-    }
-
-    .featured-joke {
-        font-size: 1.2rem;
-        line-height: 1.5;
-        margin: 1.5rem 0;
-    }
-
-    .audio-controls {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-    }
-
-    .btn-danger {
-        background: rgba(255, 51, 102, 0.2);
-        border-color: var(--neon-red);
-        color: var(--neon-red);
-    }
-
-    .player-empty {
-        color: var(--text-secondary);
-    }
-
-    .mic-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 2rem;
-        color: var(--text-secondary);
-    }
+    .now-playing-tag { font-size: 0.75rem; color: var(--neon-purple); font-weight: 700; letter-spacing: 2px; }
+    .author-title { margin: 0.5rem 0; font-size: 1.5rem; }
+    .featured-joke { font-size: 1.2rem; line-height: 1.5; margin: 1.5rem 0; }
+    .mic-icon { font-size: 3rem; margin-bottom: 1rem; }
 </style>
 
 @code {
     private List<JokeModel> shows = new();
     private JokeModel? selectedShow = null;
-    private bool isLoading = true;
+    private List<string> syndicateList = new() { "NeonMike", "SpicySarah", "QuantumQuentin" };
+    private string selectedComedian = "NeonMike";
     private bool isGenerating = false;
     private bool isPlaying = false;
 
@@ -247,37 +188,46 @@
 
     private async Task LoadShowsAsync()
     {
-        isLoading = true;
         shows = await Api.GetFeedAsync("new", 0, null);
         if (shows.Count > 0 && selectedShow == null)
         {
             selectedShow = shows[0];
         }
-        isLoading = false;
         StateHasChanged();
     }
 
-    private void SelectShow(JokeModel show)
+    private void SelectComedian(string comedian)
     {
-        selectedShow = show;
+        selectedComedian = comedian;
+        StateHasChanged();
+    }
+
+    private void SelectShow(JokeModel joke)
+    {
+        selectedShow = joke;
         isPlaying = false;
         StateHasChanged();
     }
 
-    private async Task GenerateNewShow()
+    private async Task CueComedian(string comedianName)
     {
+        selectedComedian = comedianName;
         isGenerating = true;
         StateHasChanged();
 
-        var newShow = await Api.GenerateShowAsync("standup comedy");
-        if (newShow != null)
+        var ok = await Api.TriggerComedianAsync(comedianName);
+        if (ok)
         {
-            shows.Insert(0, newShow);
-            selectedShow = newShow;
+            await LoadShowsAsync();
         }
 
         isGenerating = false;
         StateHasChanged();
+
+        if (selectedShow != null)
+        {
+            await PlaySelectedShow();
+        }
     }
 
     private async Task PlaySelectedShow()
@@ -287,13 +237,11 @@
         isPlaying = true;
         StateHasChanged();
 
-        // Endpoint URL for clean MP3 audio stream
         var audioUrl = $"api/jokes/{selectedShow.Id}/audio";
         var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
 
         if (!played)
         {
-            // Fallback to streaming /api/tts directly over HTML5 Audio
             await JS.InvokeAsync<bool>("audioInterop.speakText", selectedShow.Text);
         }
 

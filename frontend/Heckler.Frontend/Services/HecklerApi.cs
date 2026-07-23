@@ -231,14 +231,6 @@ namespace Heckler.Frontend.Services
             }
         }
 
-        // --- COMEDIAN DO TRIGGER ---
-        public async Task<bool> TriggerComedianAsync(string username)
-        {
-            try
-            {
-                var response = await _http.PostAsync($"api/comedians/{username}/trigger", null);
-                return response.IsSuccessStatusCode;
-            }
         // --- AI COMEDY SHOW GENERATOR ---
         public async Task<JokeModel?> GenerateShowAsync(string topic = "general")
         {
