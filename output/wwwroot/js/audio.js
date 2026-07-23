@@ -1,8 +1,34 @@
 let mediaRecorder = null;
 let audioChunks = [];
 let segmentedAudioCtx = null;
+let audioUnlocked = false;
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try {
+        const silentAudio = new Audio();
+        silentAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+        silentAudio.play().then(() => {
+            silentAudio.pause();
+        }).catch(() => {});
+
+        if (window.speechSynthesis) {
+            window.speechSynthesis.resume();
+        }
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx.resume();
+    } catch (e) {}
+}
+
+window.addEventListener('pointerdown', unlockAudio, { once: true });
+window.addEventListener('touchstart', unlockAudio, { once: true });
+window.addEventListener('click', unlockAudio, { once: true });
 
 window.audioInterop = {
+    unlockAudio: function () {
+        unlockAudio();
+    },
     // 1. Microphone Recording API
     startRecording: async function () {
         audioChunks = [];
@@ -127,11 +153,50 @@ window.audioInterop = {
         });
     },
 
-    // 3. Text to Speech with [PAUSE] Support
-    speakText: function (text, rate = 1.0) {
+    // 3. Text to Speech with Cloudflare Neural AI + [PAUSE] Support
+    speakText: async function (text, rate = 1.0) {
+        return new Promise(async (resolve) => {
+            try {
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    if (blob && blob.size > 500) {
+                        const objectUrl = URL.createObjectURL(blob);
+                        const audio = new Audio(objectUrl);
+                        audio.playbackRate = rate;
+                        audio.onended = () => {
+                            URL.revokeObjectURL(objectUrl);
+                            resolve();
+                        };
+                        audio.onerror = () => {
+                            URL.revokeObjectURL(objectUrl);
+                            this.fallbackSpeakText(text, rate).then(resolve);
+                        };
+                        audio.play().catch(() => {
+                            URL.revokeObjectURL(objectUrl);
+                            this.fallbackSpeakText(text, rate).then(resolve);
+                        });
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("Cloudflare Neural TTS failed, using fallback:", err);
+            }
+
+            this.fallbackSpeakText(text, rate).then(resolve);
+        });
+    },
+
+    fallbackSpeakText: function (text, rate = 1.0) {
         return new Promise((resolve) => {
+            if (!window.speechSynthesis) { resolve(); return; }
             window.speechSynthesis.cancel();
-            const parts = text.split(/\[PAUSE(?::([0-9.]+))?\]/i);
+            const parts = text.split(/\[PAUSE(?::[0-9.]+)?\]/i);
             let index = 0;
 
             function speakNext() {
@@ -144,14 +209,9 @@ window.audioInterop = {
                 index += 2;
 
                 const trimmed = part ? part.trim() : "";
-                
                 let delay = 500;
                 if (index <= parts.length) {
-                    if (pauseVal !== undefined) {
-                        delay = parseFloat(pauseVal) * 1000 || 1000;
-                    } else {
-                        delay = 1000; // default for [PAUSE]
-                    }
+                    delay = pauseVal !== undefined ? (parseFloat(pauseVal) * 1000 || 1000) : 1000;
                 }
 
                 if (!trimmed) {
@@ -161,12 +221,8 @@ window.audioInterop = {
 
                 const utterance = new SpeechSynthesisUtterance(trimmed);
                 utterance.rate = rate;
-                utterance.onend = () => {
-                    setTimeout(speakNext, delay);
-                };
-                utterance.onerror = () => {
-                    speakNext();
-                };
+                utterance.onend = () => setTimeout(speakNext, delay);
+                utterance.onerror = () => speakNext();
                 window.speechSynthesis.speak(utterance);
             }
 

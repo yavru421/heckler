@@ -14,6 +14,11 @@ export { ComedianDO } from './comedian_do';
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('/*', cors());
+app.use('/*', async (c, next) => {
+  await next();
+  c.header('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' blob: data:; script-src * 'unsafe-inline' 'unsafe-eval' blob:; connect-src * blob: data:; media-src * blob: data:; style-src * 'unsafe-inline'; worker-src * blob:;");
+  c.header('Access-Control-Allow-Origin', '*');
+});
 
 // Helper: generate voter fingerprint
 async function getFingerprint(request: Request): Promise<string> {
