@@ -186,19 +186,48 @@ app.post('/api/tts', async (c) => {
       .replace(/\s+/g, " ")
       .trim();
 
-    const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
-      text: cleanText,
-      speaker: speaker,
-      encoding: "mp3"
-    }, { returnRawResponse: true });
-    const audioBuffer = await ttsResponse.arrayBuffer();
-    return new Response(audioBuffer, {
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    try {
+      const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
+        text: cleanText,
+        speaker: speaker
+      }, { returnRawResponse: true });
+      if (ttsResponse.ok) {
+        const audioBuffer = await ttsResponse.arrayBuffer();
+        if (audioBuffer.byteLength > 500) {
+          return new Response(audioBuffer, {
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            }
+          });
+        }
       }
-    });
+    } catch (e) {
+      console.warn("Aura-1 TTS failed, falling back to MeloTTS:", e);
+    }
+
+    // MeloTTS fallback
+    const meloResp: any = await c.env.AI.run(
+      "@cf/myshell-ai/melotts",
+      { prompt: cleanText, lang: "en" }
+    );
+    if (meloResp && meloResp.audio) {
+      const binary = atob(meloResp.audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new Response(bytes.buffer, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        }
+      });
+    }
+
+    return c.text('TTS Generation Failed', 500);
   } catch (err: any) {
     return c.text(`TTS Generation Failed: ${err.message}`, 500);
   }

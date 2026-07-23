@@ -186,15 +186,45 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
         .trim();
 
       if (cleanText) {
-        const ttsResponse = await this.env.AI.run(
-          "@cf/deepgram/aura-1",
-          { text: cleanText, speaker, encoding: "mp3" },
-          { returnRawResponse: true }
-        );
-        audioBuffer = await ttsResponse.arrayBuffer();
+        // Attempt 1: Deepgram Aura-1
+        try {
+          const ttsResponse = await this.env.AI.run(
+            "@cf/deepgram/aura-1",
+            { text: cleanText, speaker },
+            { returnRawResponse: true }
+          );
+          if (ttsResponse.ok) {
+            const buf = await ttsResponse.arrayBuffer();
+            if (buf.byteLength > 500) {
+              audioBuffer = buf;
+            }
+          }
+        } catch (auraErr) {
+          console.warn("Aura-1 TTS failed, trying MeloTTS:", auraErr);
+        }
+
+        // Attempt 2: MeloTTS fallback
+        if (!audioBuffer) {
+          try {
+            const meloResp: any = await this.env.AI.run(
+              "@cf/myshell-ai/melotts",
+              { prompt: cleanText, lang: "en" }
+            );
+            if (meloResp && meloResp.audio) {
+              const binary = atob(meloResp.audio);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+              }
+              audioBuffer = bytes.buffer;
+            }
+          } catch (meloErr) {
+            console.error("MeloTTS fallback failed:", meloErr);
+          }
+        }
       }
     } catch (e) {
-      console.error("Deepgram Aura-1 synthesis failed:", e);
+      console.error("TTS synthesis pipeline error:", e);
     }
 
     // ── 4. Persist to D1 ─────────────────────────────────────────
