@@ -188,8 +188,9 @@ app.post('/api/tts', async (c) => {
 
     const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", {
       text: cleanText,
-      speaker: speaker
-    });
+      speaker: speaker,
+      encoding: "mp3"
+    }, { returnRawResponse: true });
     const audioBuffer = await ttsResponse.arrayBuffer();
     return new Response(audioBuffer, {
       headers: {

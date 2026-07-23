@@ -56,22 +56,37 @@ window.audioInterop = {
                 const cache = await window.caches.open(cacheName);
                 const cachedResponse = await cache.match(url);
 
-                if (cachedResponse) {
+                if (cachedResponse && cachedResponse.ok) {
                     const blob = await cachedResponse.blob();
-                    objectUrlToRevoke = URL.createObjectURL(blob);
-                    audioUrlToPlay = objectUrlToRevoke;
-                } else {
-                    const response = await fetch(url);
-                    if (response.ok) {
-                        const responseToCache = response.clone();
-                        try {
-                            await cache.put(url, responseToCache);
-                        } catch (cacheErr) {
-                            console.warn("Failed to write to browser Cache Storage:", cacheErr);
-                        }
-                        const blob = await response.blob();
+                    if (blob && blob.size > 100) {
                         objectUrlToRevoke = URL.createObjectURL(blob);
                         audioUrlToPlay = objectUrlToRevoke;
+                    } else {
+                        await cache.delete(url);
+                        audioUrlToPlay = url;
+                    }
+                } else {
+                    if (cachedResponse && !cachedResponse.ok) {
+                        await cache.delete(url);
+                    }
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        if (blob && blob.size > 100) {
+                            try {
+                                await cache.put(url, response.clone());
+                            } catch (cacheErr) {
+                                console.warn("Failed to write to browser Cache Storage:", cacheErr);
+                            }
+                            objectUrlToRevoke = URL.createObjectURL(blob);
+                            audioUrlToPlay = objectUrlToRevoke;
+                        } else {
+                            resolve(false);
+                            return;
+                        }
+                    } else {
+                        resolve(false);
+                        return;
                     }
                 }
             } catch (err) {
@@ -79,7 +94,7 @@ window.audioInterop = {
                 audioUrlToPlay = url;
             }
 
-            const audio = new Audio(audioUrlToPlay);
+            const audio = new Audio();
 
             const cleanup = () => {
                 if (objectUrlToRevoke) {
@@ -90,18 +105,24 @@ window.audioInterop = {
                     }
                     objectUrlToRevoke = null;
                 }
-                resolve();
             };
 
-            audio.onended = cleanup;
+            audio.onended = () => {
+                cleanup();
+                resolve(true);
+            };
+
             audio.onerror = (e) => {
-                console.error("Audio playback error:", e);
+                console.warn("Audio playback error:", e);
                 cleanup();
+                resolve(false);
             };
 
+            audio.src = audioUrlToPlay;
             audio.play().catch(e => {
-                console.error("Playback failed:", e);
+                console.warn("Playback failed:", e);
                 cleanup();
+                resolve(false);
             });
         });
     },

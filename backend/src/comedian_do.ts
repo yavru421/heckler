@@ -188,7 +188,8 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
       if (cleanText) {
         const ttsResponse = await this.env.AI.run(
           "@cf/deepgram/aura-1",
-          { text: cleanText, speaker }
+          { text: cleanText, speaker, encoding: "mp3" },
+          { returnRawResponse: true }
         );
         audioBuffer = await ttsResponse.arrayBuffer();
       }
