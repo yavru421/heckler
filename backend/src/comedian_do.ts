@@ -162,8 +162,14 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
       }
     );
 
-    const jokeText =
-      aiResponse.response ||
+    let rawJokeText = "";
+    if (typeof aiResponse === "string") {
+      rawJokeText = aiResponse;
+    } else if (aiResponse && typeof aiResponse === "object") {
+      rawJokeText = aiResponse.response || aiResponse.result || aiResponse.content || "";
+    }
+
+    const jokeText = rawJokeText.trim() ||
       "My smart fridge sent me a weekly screen time report. [PAUSE:1.5] Apparently, I spent 12 hours looking at cheese.";
     const jokeId = crypto.randomUUID();
 

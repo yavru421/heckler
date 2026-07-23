@@ -407,6 +407,7 @@
 
     private async Task CueComedian(string comedianName)
     {
+        await JS.InvokeVoidAsync("audioInterop.unlockAudio");
         await CancelPlayback();
         aiGenerating = true;
         StateHasChanged();
@@ -465,6 +466,7 @@
 
     private async Task PlaySet()
     {
+        await JS.InvokeVoidAsync("audioInterop.unlockAudio");
         if (activeJoke == null && string.IsNullOrEmpty(aiSetText)) return;
         isPlaying = true;
         StateHasChanged();
