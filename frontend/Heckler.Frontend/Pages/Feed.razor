@@ -488,7 +488,11 @@
             {
                 var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
                 var audioUrl = $"{baseAddr}api/jokes/{activeJoke.Id}/audio";
-                await JS.InvokeVoidAsync("audioInterop.playAudioUrl", audioUrl);
+                var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
+                if (!played)
+                {
+                    await JS.InvokeVoidAsync("audioInterop.speakText", activeJoke.Text, deliveryRate);
+                }
             }
             else
             {

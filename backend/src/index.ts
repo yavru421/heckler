@@ -73,8 +73,9 @@ app.get('/api/jokes', async (c) => {
         bombs: heckles[0].bombs
       } : null;
 
-      // Check if audio exists
-      const hasAudio = joke.audio_data ? true : false;
+      // Check if audio exists and has non-zero length
+      const audioBuf = joke.audio_data as ArrayBuffer | null;
+      const hasAudio = audioBuf && (audioBuf.byteLength > 0 || (audioBuf as any).length > 0) ? true : false;
 
       return {
         id: joke.id,
@@ -109,8 +110,11 @@ app.get('/api/jokes/:id/audio', async (c) => {
   if (!result || !result.audio_data) {
     return c.text('Audio not found', 404);
   }
+  const buffer = result.audio_data as ArrayBuffer;
+  if (!buffer || buffer.byteLength === 0) {
+    return c.text('Audio empty', 404);
+  }
   // D1 returns BLOBs as ArrayBuffer
-  const buffer = result.audio_data;
   const bytes = new Uint8Array(buffer.slice(0, 4));
   let contentType = 'audio/mpeg';
   if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {

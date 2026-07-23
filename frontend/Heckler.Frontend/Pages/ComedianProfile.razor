@@ -65,7 +65,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 @if (joke.HasAudio)
                                 {
-                                    <button class="haptic-btn" @onclick="() => PlayJokeAudio(joke.Id)" 
+                                    <button class="haptic-btn" @onclick="() => PlayJokeAudio(joke)" 
                                         style="padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid var(--neon-green); background: transparent; color: var(--neon-green); font-size: 0.8rem; font-family: 'Oswald', sans-serif;">
                                         🔊 PLAY RECORDING
                                     </button>
@@ -108,11 +108,15 @@
         StateHasChanged();
     }
 
-    private async Task PlayJokeAudio(string jokeId)
+    private async Task PlayJokeAudio(JokeModel joke)
     {
         var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
-        var audioUrl = $"{baseAddr}api/jokes/{jokeId}/audio";
-        await JS.InvokeVoidAsync("audioInterop.playAudioUrl", audioUrl);
+        var audioUrl = $"{baseAddr}api/jokes/{joke.Id}/audio";
+        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
+        if (!played)
+        {
+            await SpeakJokeTts(joke.Text);
+        }
     }
 
     private async Task SpeakJokeTts(string text)
