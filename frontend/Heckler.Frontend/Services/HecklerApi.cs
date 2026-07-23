@@ -248,5 +248,20 @@ namespace Heckler.Frontend.Services
             }
             return null;
         }
+
+        // --- COMEDIAN DO TRIGGER ---
+        public async Task<bool> TriggerComedianAsync(string username)
+        {
+            try
+            {
+                var response = await _http.PostAsync($"api/comedians/{username}/trigger", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error triggering comedian: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
