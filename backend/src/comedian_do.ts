@@ -60,6 +60,34 @@ const VALID_SPEAKERS = [
   "athena", "luna", "zeus", "perseus", "helios", "hera", "stella",
 ];
 
+export interface ComedianProfile {
+  name: string;
+  speaker: string;
+  archetypeKey: string;
+  categories: string[];
+}
+
+export const COMEDIAN_PROFILES: Record<string, ComedianProfile> = {
+  NeonMike: {
+    name: "NeonMike",
+    speaker: "orion",
+    archetypeKey: "deadpan_cynic",
+    categories: ["technology", "traffic", "existential"]
+  },
+  SpicySarah: {
+    name: "SpicySarah",
+    speaker: "asteria",
+    archetypeKey: "self_deprecating_neurotic",
+    categories: ["food", "relationships", "work", "social-media"]
+  },
+  QuantumQuentin: {
+    name: "QuantumQuentin",
+    speaker: "arcas",
+    archetypeKey: "surrealist_storyteller",
+    categories: ["existential", "pets", "health", "technology"]
+  }
+};
+
 const CATEGORIES = [
   "technology", "relationships", "food", "work",
   "existential", "traffic", "social-media", "pets", "health",
@@ -122,19 +150,13 @@ export class ComedianDO extends DurableObject {
   }
 
   // ── Core Generation Pipeline ─────────────────────────────────────
-  async generateJokeAndTTS(username: string): Promise<any> {
-    // Pick archetype (rotate based on username hash + time-of-day)
-    const hourSeed = new Date().getHours();
-    let hash = 0;
-    for (let i = 0; i < username.length; i++) {
-      hash = username.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const archetypeKey =
-      ARCHETYPE_KEYS[(Math.abs(hash) + hourSeed) % ARCHETYPE_KEYS.length];
-    const archetype = ARCHETYPES[archetypeKey];
+  async generateJokeAndTTS(username: string, customTopic?: string): Promise<any> {
+    const profile = COMEDIAN_PROFILES[username];
+    const archetypeKey = profile ? profile.archetypeKey : ARCHETYPE_KEYS[Math.abs(this.hashCode(username)) % ARCHETYPE_KEYS.length];
+    const archetype = ARCHETYPES[archetypeKey] || ARCHETYPES["deadpan_cynic"];
 
-    // Pick a random category
-    const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+    const categories = profile ? profile.categories : CATEGORIES;
+    const category = customTopic || categories[Math.floor(Math.random() * categories.length)];
 
     // ── 1. Generate joke text via Llama 3.1 ──────────────────────
     const userPrompt = `You are ${username}, a standup comedian performing live.
@@ -322,11 +344,18 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
     return finalSegments;
   }
 
-  private pickSpeaker(username: string): string {
+  private hashCode(str: string): number {
     let hash = 0;
-    for (let i = 0; i < username.length; i++) {
-      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    return VALID_SPEAKERS[Math.abs(hash) % VALID_SPEAKERS.length];
+    return hash;
+  }
+
+  private pickSpeaker(username: string): string {
+    if (COMEDIAN_PROFILES[username]) {
+      return COMEDIAN_PROFILES[username].speaker;
+    }
+    return VALID_SPEAKERS[Math.abs(this.hashCode(username)) % VALID_SPEAKERS.length];
   }
 }

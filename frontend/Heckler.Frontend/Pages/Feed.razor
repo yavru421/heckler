@@ -16,12 +16,16 @@
             </div>
             
             <div class="comedian-list">
-                @foreach (var comedian in syndicateList)
+                @foreach (var c in comedianProfiles)
                 {
-                    <div class="comedian-card @(selectedComedian == comedian ? "active" : "")" @onclick="() => SelectComedian(comedian)">
-                        <span class="comedian-name">🗣️ @comedian</span>
-                        <button class="btn-premium" @onclick="() => CueComedian(comedian)" disabled="@isGenerating" style="margin-top: 0.5rem; width: 100%;">
-                            @((isGenerating && selectedComedian == comedian) ? "Generating Set..." : "Trigger AI Set 🎭")
+                    <div class="comedian-card @(selectedComedian == c.Name ? "active" : "")" @onclick="() => SelectComedian(c.Name)">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="comedian-name" style="font-weight: bold;">🗣️ @c.Name</span>
+                            <span style="font-size: 0.7rem; color: var(--neon-purple); border: 1px solid var(--glass-border); padding: 2px 6px; border-radius: 4px;">🎙️ @c.Voice</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">🎭 @c.Style</div>
+                        <button class="btn-premium" @onclick="() => CueComedian(c.Name)" disabled="@isGenerating" style="margin-top: 0.6rem; width: 100%;">
+                            @((isGenerating && selectedComedian == c.Name) ? "Generating Set..." : $"Trigger {c.Name}'s Set 🎭")
                         </button>
                     </div>
                 }
@@ -174,9 +178,21 @@
 </style>
 
 @code {
+    public class ComedianProfileCard
+    {
+        public string Name { get; set; } = "";
+        public string Voice { get; set; } = "";
+        public string Style { get; set; } = "";
+    }
+
     private List<JokeModel> shows = new();
     private JokeModel? selectedShow = null;
-    private List<string> syndicateList = new() { "NeonMike", "SpicySarah", "QuantumQuentin" };
+    private List<ComedianProfileCard> comedianProfiles = new()
+    {
+        new ComedianProfileCard { Name = "NeonMike", Voice = "Orion (Deep Male)", Style = "Deadpan Tech & Traffic" },
+        new ComedianProfileCard { Name = "SpicySarah", Voice = "Asteria (Energetic Female)", Style = "Neurotic Food & Work" },
+        new ComedianProfileCard { Name = "QuantumQuentin", Voice = "Arcas (Surreal Male)", Style = "Existential Storyteller" }
+    };
     private string selectedComedian = "NeonMike";
     private bool isGenerating = false;
     private bool isPlaying = false;
