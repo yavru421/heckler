@@ -153,7 +153,7 @@ Example format:
 I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it sent me an alert: "Unrecognized person at the door." [PAUSE:1.5] It was me. Without coffee.`;
 
     const aiResponse = await this.env.AI.run(
-      "@cf/meta/llama-3.1-8b-instruct",
+      "@cf/meta/llama-3.1-8b-instruct-fast",
       {
         messages: [
           { role: "system", content: archetype.systemPrompt },

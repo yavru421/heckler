@@ -12,5 +12,22 @@
       "database_name": "heckler-ledger",
       "database_id": "054a359a-b42f-4156-a6ee-6b7a6e7b848c"
     }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COMEDIAN_DO",
+        "class_name": "ComedianDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ComedianDO"]
+    }
   ]
 }

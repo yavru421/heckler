@@ -102,7 +102,10 @@ app.post('/api/tts', async (c) => {
 });
 
 app.notFound((c) => {
-  return c.env.ASSETS.fetch(c.req.raw);
+  if (c.env.ASSETS && typeof c.env.ASSETS.fetch === 'function') {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+  return c.text('Not Found', 404);
 });
 
 export default app;
