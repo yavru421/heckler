@@ -18,9 +18,15 @@ window.addEventListener('click', unlockAudio, { once: true });
 
 let currentAudio = null;
 
+let progressCallbackRef = null;
+
 window.audioInterop = {
     unlockAudio: function () {
         unlockAudio();
+    },
+
+    registerProgressCallback: function (dotNetRef) {
+        progressCallbackRef = dotNetRef;
     },
 
     stopAllAudio: function() {
@@ -29,6 +35,9 @@ window.audioInterop = {
         }
         if ('speechSynthesis' in window) {
             try { window.speechSynthesis.cancel(); } catch(e) {}
+        }
+        if (progressCallbackRef) {
+            try { progressCallbackRef.invokeMethodAsync('UpdateAudioProgress', 0.0); } catch(e) {}
         }
     },
 
@@ -46,9 +55,17 @@ window.audioInterop = {
                             const objectUrl = URL.createObjectURL(blob);
                             const audio = new Audio(objectUrl);
                             currentAudio = audio;
+                            audio.ontimeupdate = () => {
+                                if (audio.duration > 0 && progressCallbackRef) {
+                                    try { progressCallbackRef.invokeMethodAsync('UpdateAudioProgress', audio.currentTime / audio.duration); } catch(e) {}
+                                }
+                            };
                             audio.onended = () => {
                                 URL.revokeObjectURL(objectUrl);
                                 if (currentAudio === audio) currentAudio = null;
+                                if (progressCallbackRef) {
+                                    try { progressCallbackRef.invokeMethodAsync('UpdateAudioProgress', 1.0); } catch(e) {}
+                                }
                                 resolve(true);
                             };
                             audio.onerror = () => {

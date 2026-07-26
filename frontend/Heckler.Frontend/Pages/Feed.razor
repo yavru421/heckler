@@ -35,7 +35,19 @@
                 </div>
 
                 <div class="joke-teleprompter glass-panel">
-                    <p class="teleprompter-text">“@stageState.Text”</p>
+                    <p class="teleprompter-text">
+                        @if (!string.IsNullOrEmpty(stageState.Text))
+                        {
+                            var words = stageState.Text.Replace("[PAUSE]", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            int activeIndex = (int)Math.Floor(audioProgress * words.Length);
+                            for (int i = 0; i < words.Length; i++)
+                            {
+                                var isSpoken = i <= activeIndex;
+                                var isCurrent = i == activeIndex;
+                                <span class="karaoke-word @(isCurrent ? "word-active" : isSpoken ? "word-spoken" : "word-pending")">@words[i] </span>
+                            }
+                        }
+                    </p>
                     <div class="category-pill">@stageState.Category</div>
                 </div>
 
@@ -187,7 +199,11 @@
         background: rgba(0,0,0,0.4); border: 1px solid var(--surface-border); margin-bottom: 1.5rem;
     }
 
-    .teleprompter-text { font-size: 1.3rem; line-height: 1.6; color: white; margin: 0 0 1rem 0; }
+    .teleprompter-text { font-size: 1.3rem; line-height: 1.6; color: white; margin: 0 0 1rem 0; min-height: 80px; }
+    .karaoke-word { transition: all 0.15s ease; display: inline-block; margin-right: 0.25rem; }
+    .word-pending { color: rgba(255,255,255,0.35); filter: blur(0.3px); }
+    .word-spoken { color: #ffffff; text-shadow: 0 0 5px rgba(255,255,255,0.4); }
+    .word-active { color: #00f0ff; font-weight: 700; transform: scale(1.1); text-shadow: 0 0 12px #00f0ff; }
     .category-pill { display: inline-block; font-size: 0.75rem; text-transform: uppercase; color: var(--neon-blue); letter-spacing: 1px; border: 1px solid var(--neon-blue); padding: 0.2rem 0.6rem; border-radius: 12px; }
 
     .broadcast-player { margin-bottom: 1.5rem; width: 100%; max-width: 400px; }
@@ -235,13 +251,23 @@
     private bool isPolling = true;
     private string chatInputText = "";
     private string myUsername = "AnonymousListener";
-    private string lastJokeId = "";
+    private double audioProgress = 0.0;
+    private DotNetObjectReference<Feed>? objRef;
 
     protected override async Task OnInitializedAsync()
     {
         myUsername = await Identity.GetUsernameAsync() ?? "Listener_" + Random.Shared.Next(100, 999);
+        objRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("audioInterop.registerProgressCallback", objRef);
         await PollStageAsync();
         _ = StartPollingLoop();
+    }
+
+    [JSInvokable]
+    public void UpdateAudioProgress(double progress)
+    {
+        audioProgress = Math.Clamp(progress, 0.0, 1.0);
+        StateHasChanged();
     }
 
     private async Task StartPollingLoop()
@@ -324,5 +350,6 @@
     public void Dispose()
     {
         isPolling = false;
+        objRef?.Dispose();
     }
 }
