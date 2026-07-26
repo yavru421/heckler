@@ -199,6 +199,11 @@
     private void SelectComedian(string comedian)
     {
         selectedComedian = comedian;
+        var existingJoke = shows.FirstOrDefault(s => s.AuthorName.Equals(comedian, StringComparison.OrdinalIgnoreCase));
+        if (existingJoke != null)
+        {
+            selectedShow = existingJoke;
+        }
         StateHasChanged();
     }
 
@@ -218,7 +223,11 @@
         var ok = await Api.TriggerComedianAsync(comedianName);
         if (ok)
         {
-            await LoadShowsAsync();
+            shows = await Api.GetFeedAsync("new", 0, null);
+            if (shows.Count > 0)
+            {
+                selectedShow = shows.FirstOrDefault(s => s.AuthorName.Equals(comedianName, StringComparison.OrdinalIgnoreCase)) ?? shows[0];
+            }
         }
 
         isGenerating = false;
