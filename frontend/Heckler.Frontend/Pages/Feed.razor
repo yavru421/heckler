@@ -38,11 +38,14 @@
                     <p class="teleprompter-text">
                         @if (!string.IsNullOrEmpty(stageState.Text))
                         {
-                            var words = stageState.Text.Replace("[PAUSE]", "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                            int activeIndex = (int)Math.Floor(audioProgress * words.Length);
-                            for (int i = 0; i < words.Length; i++)
+                            var cleanJokeText = System.Text.RegularExpressions.Regex.Replace(stageState.Text, @"\[PAUSE(?::[0-9.]+)?\]", " ");
+                            var words = cleanJokeText.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                            int totalWords = words.Length;
+                            int activeIndex = audioProgress <= 0.0 ? -1 : (int)Math.Min(Math.Floor(audioProgress * totalWords), totalWords - 1);
+                            
+                            for (int i = 0; i < totalWords; i++)
                             {
-                                var isSpoken = i <= activeIndex;
+                                var isSpoken = i < activeIndex;
                                 var isCurrent = i == activeIndex;
                                 <span class="karaoke-word @(isCurrent ? "word-active" : isSpoken ? "word-spoken" : "word-pending")">@words[i] </span>
                             }
