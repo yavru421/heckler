@@ -40,13 +40,21 @@ describe("ComedianDO & Jokes API Integration Test", () => {
     expect(Array.isArray(jokes)).toBe(true);
   });
 
-  it("triggers ComedianDO generation endpoint", async () => {
+  it("triggers ComedianDO generation endpoint and tests audio streaming", async () => {
     const response = await SELF.fetch("http://example.com/api/comedians/JerrySeinfeld/trigger", {
       method: "POST"
     });
-    console.log("Response status:", response.status);
-    const text = await response.text();
-    console.log("ComedianDO trigger raw response:", text);
-    expect([200, 500]).toContain(response.status);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.joke).toHaveProperty("id");
+    expect(body.joke.has_audio).toBe(true);
+
+    // Test audio stream endpoint
+    const audioResp = await SELF.fetch(`http://example.com/api/jokes/${body.joke.id}/audio`);
+    expect(audioResp.status).toBe(200);
+    expect(audioResp.headers.get("Content-Type")).toMatch(/audio\/(mpeg|webm)/);
+    const audioArrayBuffer = await audioResp.arrayBuffer();
+    expect(audioArrayBuffer.byteLength).toBeGreaterThan(500);
   });
 });
