@@ -265,7 +265,8 @@
 
                 if (jokeChanged && isPlaying)
                 {
-                    // Auto-play next track if tuned into broadcast
+                    // Force-cancel previous playing audio and snap immediately to current stage joke
+                    await JS.InvokeVoidAsync("audioInterop.stopAllAudio");
                     await PlayCurrentBroadcastAudio();
                 }
                 StateHasChanged();
