@@ -2,9 +2,34 @@
 
 <div class="app-wrapper">
     <header class="app-header">
-        <div class="logo">
-            <h1 class="neon-text fade-in-text">HECKLER</h1>
-            <div class="logo-subtitle">LIVE ONLINE COMEDY CLUB</div>
+        <div class="header-left">
+            <div class="logo">
+                <h1 class="neon-text fade-in-text">HECKLER</h1>
+                <div class="logo-subtitle">LIVE ONLINE COMEDY CLUB</div>
+            </div>
+            <nav class="nav-links">
+                <a href="/">MMO Stage</a>
+                <a href="/rooms">VIP Tables</a>
+                <a href="/lineups">Playlists</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            @if (Identity.IsAuthenticated)
+            {
+                <div class="user-pill">
+                    <span class="user-email">👤 @Identity.CurrentUser?.Email</span>
+                    <span class="tier-badge @(Identity.IsPremium ? "tier-premium" : "tier-standard")">
+                        @(Identity.CurrentUser?.SubscriptionTier?.ToUpper() ?? "STANDARD")
+                    </span>
+                    <button class="btn-logout" @onclick="Logout">Exit</button>
+                </div>
+            }
+            else
+            {
+                <a href="https://personalization.dondlingergc.com" target="_blank" class="btn-auth-login">
+                    🔑 LOG IN WITH PERSONALIZATION
+                </a>
+            }
         </div>
     </header>
 
@@ -16,6 +41,22 @@
     </main>
 </div>
 
+@inject IdentityService Identity
+@inject NavigationManager Nav
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Identity.InitializeAsync();
+    }
+
+    private async Task Logout()
+    {
+        await Identity.LogoutAsync();
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+}
+
 <style>
     .app-wrapper {
         display: flex;
@@ -26,19 +67,106 @@
 
     .app-header {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
         align-items: center;
-        text-align: center;
-        padding: 1rem;
+        padding: 0.8rem 2rem;
         background: rgba(10, 10, 12, 0.95);
         border-bottom: 1px solid var(--surface-border);
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
     }
 
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+        color: var(--neon-blue);
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-auth-login {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        background: rgba(255, 215, 0, 0.15);
+        border: 1px solid #ffd700;
+        color: #ffd700;
+        text-decoration: none;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.85rem;
+        font-weight: bold;
+        transition: all 0.2s;
+    }
+
+    .btn-auth-login:hover {
+        background: #ffd700;
+        color: black;
+    }
+
+    .user-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(255,255,255,0.05);
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        border: 1px solid var(--surface-border);
+    }
+
+    .user-email {
+        font-size: 0.85rem;
+        color: white;
+    }
+
+    .tier-badge {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .tier-premium {
+        background: #ffd700;
+        color: black;
+    }
+
+    .tier-standard {
+        background: var(--surface-border);
+        color: var(--text-secondary);
+    }
+
+    .btn-logout {
+        background: transparent;
+        border: none;
+        color: #ff3366;
+        cursor: pointer;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+    }
+
     .logo {
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
     }
 
     .logo h1 {
@@ -69,3 +197,4 @@
         animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 </style>
+

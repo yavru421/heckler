@@ -1,282 +1,327 @@
 @page "/"
 @inject HecklerApi Api
+@inject IdentityService Identity
 @inject IJSRuntime JS
+@implements IDisposable
 
-<div class="heckler-container">
-    <header class="app-header glass-panel">
-        <h2 class="neon-text">🎭 Heckler Comedian Lounge</h2>
-        <p class="subtitle">Select a comedian to trigger their Durable Object AI set</p>
+<div class="mmo-venue-container">
+    <!-- Top Venue Broadcast Header -->
+    <header class="venue-header glass-panel">
+        <div class="broadcast-status">
+            <span class="live-indicator"></span>
+            <span class="broadcast-title">MMO MAIN STAGE</span>
+        </div>
+
+        <div class="presence-badge">
+            <span class="icon">👥</span>
+            <span>@(stageState?.ListenersCount ?? 42) LISTENERS IN VENUE</span>
+        </div>
+
+        <div class="vip-table-promo">
+            <span class="vip-badge">⭐ VIP FEATURE</span>
+            <a href="/rooms" class="btn-vip">Host a Table</a>
+        </div>
     </header>
 
-    <div class="main-layout">
-        <!-- Comedian Lobby (Left) -->
-        <section class="catalog-panel glass-panel">
-            <div class="panel-header">
-                <h4>🎙️ Autonomous Comedians</h4>
-            </div>
-            
-            <div class="comedian-list">
-                @foreach (var c in comedianProfiles)
-                {
-                    <div class="comedian-card @(selectedComedian == c.Name ? "active" : "")" @onclick="() => SelectComedian(c.Name)">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="comedian-name" style="font-weight: bold;">🗣️ @c.Name</span>
-                            <span style="font-size: 0.7rem; color: var(--neon-purple); border: 1px solid var(--glass-border); padding: 2px 6px; border-radius: 4px;">🎙️ @c.Voice</span>
-                        </div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">🎭 @c.Style</div>
-                        <button class="btn-premium" @onclick="() => CueComedian(c.Name)" disabled="@isGenerating" style="margin-top: 0.6rem; width: 100%;">
-                            @((isGenerating && selectedComedian == c.Name) ? "Generating Set..." : $"Trigger {c.Name}'s Set 🎭")
-                        </button>
-                    </div>
-                }
-            </div>
+    <div class="mmo-grid-layout">
+        <!-- Main Spotlight Stage & Performer (Center Left) -->
+        <main class="stage-hall glass-panel glow-border">
+            <div class="spotlight-overlay"></div>
 
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">📜 Saved Jokes Catalog</h4>
-            <div class="shows-list scroll-panel">
-                @foreach (var joke in shows)
-                {
-                    <div class="show-card @(selectedShow?.Id == joke.Id ? "active" : "")" @onclick="() => SelectShow(joke)">
-                        <div class="show-meta">
-                            <span>@@@joke.AuthorName</span>
-                            <span>@joke.Category</span>
-                        </div>
-                        <p class="show-text">“@joke.Text”</p>
-                    </div>
-                }
-            </div>
-        </section>
-
-        <!-- Single Audio Player (Center) -->
-        <section class="player-panel glass-panel glow-border">
-            @if (selectedShow != null)
+            @if (stageState != null)
             {
-                <div class="player-content">
-                    <span class="now-playing-tag">NOW PLAYING</span>
-                    <h3 class="author-title">@@@selectedShow.AuthorName</h3>
-                    <p class="featured-joke">“@selectedShow.Text”</p>
-                    
-                    <div class="audio-controls">
-                        @if (isPlaying)
-                        {
-                            <button class="btn-premium btn-danger" @onclick="StopAudio">⏹️ Pause</button>
-                        }
-                        else
-                        {
-                            <button class="btn-premium" @onclick="PlaySelectedShow">▶️ Play Audio</button>
-                        }
+                <div class="performer-badge">
+                    <span class="mic-icon">🎙️</span> ON STAGE NOW: <strong class="performer-name">@@@stageState.Performer</strong>
+                </div>
+
+                <div class="joke-teleprompter glass-panel">
+                    <p class="teleprompter-text">“@stageState.Text”</p>
+                    <div class="category-pill">@stageState.Category</div>
+                </div>
+
+                <!-- Synchronized Audio Player Controls -->
+                <div class="broadcast-player">
+                    @if (isPlaying)
+                    {
+                        <button class="btn-audio btn-playing" @onclick="ToggleAudio">
+                            <span class="pulse-wave">🔊</span> BROADCASTING LIVE (SYNCED)
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-audio btn-play" @onclick="ToggleAudio">
+                            ▶️ TUNE INTO LIVE STAGE AUDIO
+                        </button>
+                    }
+                </div>
+
+                <!-- Live Audience Reaction Soundboard -->
+                <div class="soundboard-panel">
+                    <div class="soundboard-header">INTERACT WITH THE STAGE (BROADCAST TO EVERYONE)</div>
+                    <div class="soundboard-buttons">
+                        <button class="btn-react btn-laugh" @onclick='() => React("laugh")'>
+                            😂 LAUGH <span class="count">(@(stageState.Reactions.GetValueOrDefault("laugh", 0)))</span>
+                        </button>
+                        <button class="btn-react btn-clap" @onclick='() => React("clap")'>
+                            👏 CLAP <span class="count">(@(stageState.Reactions.GetValueOrDefault("clap", 0)))</span>
+                        </button>
+                        <button class="btn-react btn-boo" @onclick='() => React("boo")'>
+                            🍅 BOO <span class="count">(@(stageState.Reactions.GetValueOrDefault("boo", 0)))</span>
+                        </button>
                     </div>
                 </div>
             }
             else
             {
-                <div class="player-empty">
-                    <div class="mic-icon">🎙️</div>
-                    <h3>Select a Comedian Set</h3>
-                    <p>Click a comedian on the left to trigger their AI set and listen.</p>
+                <div class="stage-loading">
+                    <div class="spinner">🎙️</div>
+                    <p>Connecting to Main Stage Broadcast...</p>
                 </div>
             }
-        </section>
+
+            <!-- Visual Crowd Seating Grid -->
+            <div class="crowd-grid-panel">
+                <div class="crowd-header">AUDIENCE SEATING</div>
+                <div class="crowd-seats">
+                    @for (int i = 0; i < 18; i++)
+                    {
+                        var isUser = (i == 0);
+                        <div class="seat @(isUser ? "seat-user" : "seat-active")" title="@(isUser ? "You" : $"Listener #{i+100}")">
+                            <span>@(isUser ? "👤" : "🪑")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </main>
+
+        <!-- Live Audience Chat & Heckle Feed (Right Sidebar) -->
+        <aside class="chat-sidebar glass-panel">
+            <div class="chat-header">
+                💬 LIVE AUDIENCE CHAT & HECKLES
+            </div>
+
+            <div class="chat-messages-container">
+                @if (stageState?.ChatMessages != null)
+                {
+                    @foreach (var msg in stageState.ChatMessages)
+                    {
+                        <div class="chat-bubble @(msg.Username == myUsername ? "mine" : "")">
+                            <div class="chat-author">@@@msg.Username <span class="time">@msg.Timestamp</span></div>
+                            <div class="chat-text">@msg.Message</div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" @bind="chatInputText" @onkeyup="HandleChatKeyUp" placeholder="Shout a heckle or comment..." class="chat-input" />
+                <button class="btn-send-chat" @onclick="SendChat">SEND 📣</button>
+            </div>
+        </aside>
     </div>
 </div>
 
 <style>
-    .heckler-container {
+    .mmo-venue-container {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
-        width: 100%;
-        max-width: 1000px;
+        gap: 1rem;
+        max-width: 1200px;
         margin: 0 auto;
-        padding: 1.5rem;
-        box-sizing: border-box;
+        padding: 1rem;
     }
 
-    .app-header {
-        text-align: center;
-        padding: 1.5rem;
-    }
-
-    .app-header h2 { margin: 0; font-size: 2rem; }
-    .subtitle { color: var(--text-secondary); margin: 0.5rem 0 0 0; }
-
-    .main-layout {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .catalog-panel, .player-panel {
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .comedian-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.8rem;
-    }
-
-    .comedian-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--glass-border);
-        border-radius: 10px;
-        padding: 0.8rem;
-        cursor: pointer;
-    }
-
-    .comedian-card.active {
-        border-color: var(--neon-purple);
-        background: rgba(157, 78, 221, 0.1);
-    }
-
-    .shows-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        max-height: 250px;
-        overflow-y: auto;
-    }
-
-    .show-card {
-        background: rgba(0, 0, 0, 0.2);
-        border: 1px solid var(--glass-border);
-        border-radius: 8px;
-        padding: 0.6rem;
-        cursor: pointer;
-        font-size: 0.85rem;
-    }
-
-    .show-card.active {
-        border-color: var(--neon-purple);
-    }
-
-    .show-meta {
+    .venue-header {
         display: flex;
         justify-content: space-between;
-        color: var(--neon-purple);
-        font-weight: bold;
-        font-size: 0.75rem;
+        align-items: center;
+        padding: 0.8rem 1.5rem;
+        border-radius: 14px;
+        background: rgba(15, 15, 20, 0.85);
     }
 
-    .show-text {
-        margin: 0.3rem 0 0 0;
-        color: var(--text-primary);
+    .broadcast-status { display: flex; align-items: center; gap: 0.6rem; }
+    .live-indicator {
+        width: 10px; height: 10px; border-radius: 50%; background: #ff3366;
+        box-shadow: 0 0 10px #ff3366; animation: blink 1.2s infinite;
     }
 
-    .player-panel {
-        justify-content: center;
+    @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .broadcast-title { font-family: 'Oswald', sans-serif; letter-spacing: 2px; color: var(--neon-purple); font-weight: 700; }
+    .presence-badge { font-size: 0.85rem; color: var(--neon-blue); font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
+
+    .vip-table-promo { display: flex; align-items: center; gap: 0.5rem; }
+    .vip-badge { font-size: 0.7rem; background: rgba(255, 215, 0, 0.15); color: #ffd700; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold; }
+    .btn-vip { color: white; text-decoration: none; font-size: 0.85rem; font-family: 'Oswald', sans-serif; border: 1px solid rgba(255,215,0,0.4); padding: 0.3rem 0.8rem; border-radius: 6px; }
+
+    .mmo-grid-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 1rem;
+    }
+
+    .stage-hall {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
         align-items: center;
         text-align: center;
-        min-height: 350px;
+        position: relative;
+        overflow: hidden;
+        min-height: 480px;
     }
 
-    .now-playing-tag { font-size: 0.75rem; color: var(--neon-purple); font-weight: 700; letter-spacing: 2px; }
-    .author-title { margin: 0.5rem 0; font-size: 1.5rem; }
-    .featured-joke { font-size: 1.2rem; line-height: 1.5; margin: 1.5rem 0; }
-    .mic-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .spotlight-overlay {
+        position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+        width: 300px; height: 300px;
+        background: radial-gradient(circle, rgba(157, 78, 221, 0.12) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .performer-badge { font-family: 'Oswald', sans-serif; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 1rem; }
+    .performer-name { color: var(--neon-purple); font-size: 1.4rem; }
+
+    .joke-teleprompter {
+        width: 100%; max-width: 650px; padding: 1.5rem; border-radius: 12px;
+        background: rgba(0,0,0,0.4); border: 1px solid var(--surface-border); margin-bottom: 1.5rem;
+    }
+
+    .teleprompter-text { font-size: 1.3rem; line-height: 1.6; color: white; margin: 0 0 1rem 0; }
+    .category-pill { display: inline-block; font-size: 0.75rem; text-transform: uppercase; color: var(--neon-blue); letter-spacing: 1px; border: 1px solid var(--neon-blue); padding: 0.2rem 0.6rem; border-radius: 12px; }
+
+    .broadcast-player { margin-bottom: 1.5rem; width: 100%; max-width: 400px; }
+    .btn-audio {
+        width: 100%; padding: 0.8rem 1.5rem; border-radius: 30px; font-family: 'Oswald', sans-serif;
+        font-size: 1rem; cursor: pointer; transition: all 0.3s ease; border: none;
+    }
+    .btn-play { background: linear-gradient(135deg, var(--neon-purple), var(--neon-blue)); color: white; }
+    .btn-playing { background: rgba(0,255,136,0.15); border: 1px solid var(--neon-green); color: var(--neon-green); }
+
+    .soundboard-panel { width: 100%; max-width: 650px; margin-bottom: 1.5rem; }
+    .soundboard-header { font-size: 0.75rem; color: var(--text-secondary); font-family: 'Oswald', sans-serif; letter-spacing: 1px; margin-bottom: 0.6rem; }
+    .soundboard-buttons { display: flex; justify-content: center; gap: 0.8rem; flex-wrap: wrap; }
+    .btn-react {
+        padding: 0.6rem 1.2rem; border-radius: 20px; font-family: 'Oswald', sans-serif;
+        background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: white; cursor: pointer;
+    }
+    .btn-laugh:hover { border-color: var(--neon-green); color: var(--neon-green); }
+    .btn-clap:hover { border-color: var(--neon-blue); color: var(--neon-blue); }
+    .btn-boo:hover { border-color: var(--neon-red); color: var(--neon-red); }
+
+    .crowd-grid-panel { width: 100%; border-top: 1px solid var(--surface-border); padding-top: 1rem; }
+    .crowd-header { font-size: 0.75rem; color: var(--text-secondary); font-family: 'Oswald', sans-serif; letter-spacing: 1px; margin-bottom: 0.5rem; }
+    .crowd-seats { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+    .seat { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .seat-user { border: 1px solid var(--neon-purple); background: rgba(157,78,221,0.2); }
+
+    .chat-sidebar { display: flex; flex-direction: column; height: 500px; padding: 1rem; }
+    .chat-header { font-family: 'Oswald', sans-serif; font-size: 0.9rem; letter-spacing: 1px; color: var(--neon-blue); margin-bottom: 0.8rem; border-bottom: 1px solid var(--surface-border); padding-bottom: 0.5rem; }
+    .chat-messages-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding-right: 0.4rem; }
+    .chat-bubble { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+    .chat-bubble.mine { border-color: var(--neon-purple); background: rgba(157,78,221,0.08); }
+    .chat-author { font-size: 0.75rem; color: var(--neon-purple); font-weight: bold; margin-bottom: 0.2rem; }
+    .chat-author .time { color: var(--text-secondary); font-weight: normal; margin-left: 0.4rem; }
+    .chat-text { color: white; line-height: 1.4; }
+
+    .chat-input-area { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+    .chat-input { flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white; font-size: 0.85rem; }
+    .btn-send-chat { padding: 0.5rem 0.8rem; border-radius: 6px; border: none; background: var(--neon-purple); color: white; font-family: 'Oswald', sans-serif; font-size: 0.8rem; cursor: pointer; }
 </style>
 
 @code {
-    public class ComedianProfileCard
-    {
-        public string Name { get; set; } = "";
-        public string Voice { get; set; } = "";
-        public string Style { get; set; } = "";
-    }
-
-    private List<JokeModel> shows = new();
-    private JokeModel? selectedShow = null;
-    private List<ComedianProfileCard> comedianProfiles = new()
-    {
-        new ComedianProfileCard { Name = "NeonMike", Voice = "Orion (Deep Male)", Style = "Deadpan Tech & Traffic" },
-        new ComedianProfileCard { Name = "SpicySarah", Voice = "Asteria (Energetic Female)", Style = "Neurotic Food & Work" },
-        new ComedianProfileCard { Name = "QuantumQuentin", Voice = "Arcas (Surreal Male)", Style = "Existential Storyteller" }
-    };
-    private string selectedComedian = "NeonMike";
-    private bool isGenerating = false;
+    private LiveStageState? stageState = null;
     private bool isPlaying = false;
+    private bool isPolling = true;
+    private string chatInputText = "";
+    private string myUsername = "AnonymousListener";
+    private string lastJokeId = "";
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadShowsAsync();
+        myUsername = await Identity.GetUsernameAsync() ?? "Listener_" + Random.Shared.Next(100, 999);
+        await PollStageAsync();
+        _ = StartPollingLoop();
     }
 
-    private async Task LoadShowsAsync()
+    private async Task StartPollingLoop()
     {
-        shows = await Api.GetFeedAsync("new", 0, null);
-        if (shows.Count > 0 && selectedShow == null)
+        while (isPolling)
         {
-            selectedShow = shows[0];
+            await Task.Delay(2000); // 2s broadcast sync loop
+            await PollStageAsync();
         }
-        StateHasChanged();
     }
 
-    private void SelectComedian(string comedian)
+    private async Task PollStageAsync()
     {
-        selectedComedian = comedian;
-        var existingJoke = shows.FirstOrDefault(s => s.AuthorName.Equals(comedian, StringComparison.OrdinalIgnoreCase));
-        if (existingJoke != null)
+        try
         {
-            selectedShow = existingJoke;
-        }
-        StateHasChanged();
-    }
-
-    private void SelectShow(JokeModel joke)
-    {
-        selectedShow = joke;
-        isPlaying = false;
-        StateHasChanged();
-    }
-
-    private async Task CueComedian(string comedianName)
-    {
-        selectedComedian = comedianName;
-        isGenerating = true;
-        StateHasChanged();
-
-        var ok = await Api.TriggerComedianAsync(comedianName);
-        if (ok)
-        {
-            shows = await Api.GetFeedAsync("new", 0, null);
-            if (shows.Count > 0)
+            var updated = await Api.GetLiveStageAsync();
+            if (updated != null)
             {
-                selectedShow = shows.FirstOrDefault(s => s.AuthorName.Equals(comedianName, StringComparison.OrdinalIgnoreCase)) ?? shows[0];
+                var jokeChanged = (stageState != null && stageState.JokeId != updated.JokeId);
+                stageState = updated;
+
+                if (jokeChanged && isPlaying)
+                {
+                    // Auto-play next track if tuned into broadcast
+                    await PlayCurrentBroadcastAudio();
+                }
+                StateHasChanged();
             }
         }
+        catch { }
+    }
 
-        isGenerating = false;
-        StateHasChanged();
-
-        if (selectedShow != null)
+    private async Task ToggleAudio()
+    {
+        isPlaying = !isPlaying;
+        if (isPlaying)
         {
-            await PlaySelectedShow();
+            await PlayCurrentBroadcastAudio();
         }
     }
 
-    private async Task PlaySelectedShow()
+    private async Task PlayCurrentBroadcastAudio()
     {
-        if (selectedShow == null) return;
+        if (stageState == null) return;
         await JS.InvokeVoidAsync("audioInterop.unlockAudio");
-        isPlaying = true;
-        StateHasChanged();
-
-        var audioUrl = $"api/jokes/{selectedShow.Id}/audio";
-        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
-
-        if (!played)
+        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", stageState.AudioUrl);
+        if (!played && !string.IsNullOrEmpty(stageState.Text))
         {
-            await JS.InvokeAsync<bool>("audioInterop.speakText", selectedShow.Text);
+            bool isFemale = stageState.Performer != null && stageState.Performer.ToLower().Contains("sarah");
+            await JS.InvokeAsync<bool>("audioInterop.speakText", stageState.Text, isFemale);
         }
-
-        isPlaying = false;
-        StateHasChanged();
     }
 
-    private void StopAudio()
+    private async Task React(string type)
     {
-        isPlaying = false;
-        StateHasChanged();
+        if (stageState == null) return;
+        await Api.ReactLiveStageAsync(type);
+        _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", type);
+        await PollStageAsync();
+    }
+
+    private async Task SendChat()
+    {
+        if (string.IsNullOrWhiteSpace(chatInputText)) return;
+        var txt = chatInputText;
+        chatInputText = "";
+        await Api.SendStageChatAsync(myUsername, txt);
+        await PollStageAsync();
+    }
+
+    private async Task HandleChatKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendChat();
+        }
+    }
+
+    public void Dispose()
+    {
+        isPolling = false;
     }
 }

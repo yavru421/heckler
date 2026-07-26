@@ -105,8 +105,92 @@ export class ComedianDO extends DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const usernameParam = url.searchParams.get("username");
 
+    // ── WebSocket Upgrade & Hibernation Endpoint ──────────────────────
+    if (request.headers.get("Upgrade") === "websocket") {
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+      this.ctx.acceptWebSocket(server);
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
+    // ── Main Stage Broadcast Route ──────────────────────────────────
+    if (url.pathname.endsWith("/stage/live")) {
+      let stageState: any = await this.state.storage.get("stageState");
+      const now = Date.now();
+
+      // If no broadcast or expired, trigger next joke set
+      if (!stageState || (stageState.startedAt + stageState.durationMs < now)) {
+        const comedians = ["NeonMike", "SpicySarah", "QuantumQuentin"];
+        const comic = comedians[Math.floor(Math.random() * comedians.length)];
+        const joke = await this.generateJokeAndTTS(comic);
+        
+        stageState = {
+          jokeId: joke.id,
+          performer: comic,
+          text: joke.text,
+          category: joke.category,
+          hasAudio: joke.has_audio,
+          audioUrl: `api/jokes/${joke.id}/audio`,
+          startedAt: now,
+          durationMs: 25000, // 25s set length
+          listenersCount: Math.floor(Math.random() * 15) + 32,
+          reactions: { laugh: 0, clap: 0, boo: 0 },
+          chatMessages: [
+            { username: "ClubHost", message: `Welcome everyone to the Main Stage! ${comic} is taking the mic.`, timestamp: new Date().toLocaleTimeString() }
+          ]
+        };
+        await this.state.storage.put("stageState", stageState);
+      }
+
+      return new Response(JSON.stringify(stageState), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
+
+    if (url.pathname.endsWith("/stage/react")) {
+      try {
+        const body: any = await request.json();
+        let stageState: any = await this.state.storage.get("stageState");
+        if (stageState) {
+          const type = body.type || "laugh";
+          stageState.reactions[type] = (stageState.reactions[type] || 0) + 1;
+          await this.state.storage.put("stageState", stageState);
+
+          // Atomic D1 increment
+          if (type === "laugh" || type === "clap") {
+            await this.env.DB.prepare("UPDATE jokes SET kills = kills + 1 WHERE id = ?").bind(stageState.jokeId).run();
+          } else if (type === "boo") {
+            await this.env.DB.prepare("UPDATE jokes SET bombs = bombs + 1 WHERE id = ?").bind(stageState.jokeId).run();
+          }
+        }
+        return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), { status: 400 });
+      }
+    }
+
+    if (url.pathname.endsWith("/stage/chat")) {
+      try {
+        const body: any = await request.json();
+        let stageState: any = await this.state.storage.get("stageState");
+        if (stageState) {
+          const msg = {
+            username: body.username || "Listener",
+            message: body.message || "",
+            timestamp: new Date().toLocaleTimeString()
+          };
+          stageState.chatMessages.push(msg);
+          if (stageState.chatMessages.length > 25) stageState.chatMessages.shift(); // Keep last 25
+          await this.state.storage.put("stageState", stageState);
+        }
+        return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), { status: 400 });
+      }
+    }
+
+    const usernameParam = url.searchParams.get("username");
     if (usernameParam) {
       await this.state.storage.put("username", usernameParam);
     }
@@ -358,4 +442,31 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
     }
     return VALID_SPEAKERS[Math.abs(this.hashCode(username)) % VALID_SPEAKERS.length];
   }
+
+  // ── Durable Object WebSocket Hibernation Life-Cycle ─────────────────
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    try {
+      const data = JSON.parse(typeof message === "string" ? message : new TextDecoder().decode(message));
+      if (data.type === "react") {
+        let stageState: any = await this.state.storage.get("stageState");
+        if (stageState) {
+          const reactionType = data.reaction || "laugh";
+          stageState.reactions[reactionType] = (stageState.reactions[reactionType] || 0) + 1;
+          await this.state.storage.put("stageState", stageState);
+        }
+      }
+      
+      // Fan out real-time broadcast event to all connected WebSockets in venue
+      const sockets = this.ctx.getWebSockets();
+      const broadcastMsg = typeof message === "string" ? message : new TextDecoder().decode(message);
+      for (const socket of sockets) {
+        try { socket.send(broadcastMsg); } catch(e) {}
+      }
+    } catch (e) {}
+  }
+
+  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
+    ws.close(code, "Closed by server");
+  }
 }
+

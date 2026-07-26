@@ -263,5 +263,47 @@ namespace Heckler.Frontend.Services
                 return false;
             }
         }
+
+        // --- MMO LIVE MAIN STAGE ---
+        public async Task<LiveStageState?> GetLiveStageAsync()
+        {
+            try
+            {
+                return await _http.GetFromJsonAsync<LiveStageState>("api/stage/live");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching live stage: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<bool> ReactLiveStageAsync(string reactionType)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/stage/react", new { type = reactionType });
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending stage reaction: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> SendStageChatAsync(string username, string message)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/stage/chat", new { username, message });
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending stage chat: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

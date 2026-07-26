@@ -1,15 +1,27 @@
 @page "/rooms"
 @inject HecklerApi Api
+@inject IdentityService Identity
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
 
 <div class="heckler-app">
-    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none;">
+    <header class="app-header glass-panel" style="border-radius: 0 0 16px 16px; margin-bottom: 2rem; border-top: none; display: flex; justify-content: space-between; align-items: center;">
         <div class="logo">
             <h1>CO-LISTENING <span class="neon-text">TABLES</span></h1>
         </div>
-        <button class="haptic-btn" @onclick="LeaveRoom" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">🎤 CLUB STAGE</button>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            @if (Identity.IsAuthenticated)
+            {
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-align: right;">
+                    <div style="color: white; font-weight: bold;">👤 @Identity.CurrentUser?.Email</div>
+                    <span style="font-size: 0.7rem; background: @(Identity.IsPremium ? "#ffd700" : "var(--surface-border)"); color: black; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: bold; text-transform: uppercase;">
+                        @(Identity.CurrentUser?.SubscriptionTier ?? "STANDARD")
+                    </span>
+                </div>
+            }
+            <button class="haptic-btn" @onclick="LeaveRoom" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">🎤 CLUB STAGE</button>
+        </div>
     </header>
 
     <main class="stage-container" style="max-width: 800px;">
@@ -31,7 +43,7 @@
                                 <div style="padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); background: rgba(0,0,0,0.3); display: flex; justify-content: space-between; align-items: center;">
                                     <div>
                                         <h4 style="margin: 0; font-size: 1rem; color: white;">@room.Name</h4>
-                                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Table #@room.Id.Substring(0, 4)</span>
+                                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Table #@(room.Id.Length >= 4 ? room.Id.Substring(0, 4) : room.Id)</span>
                                     </div>
                                     <button class="haptic-btn" @onclick="() => JoinRoom(room)" style="padding: 0.4rem 1rem; border-radius: 6px; border: none; background: var(--neon-blue); color: black; font-family: 'Oswald', sans-serif; font-size: 0.8rem;">JOIN TABLE</button>
                                 </div>
@@ -40,8 +52,12 @@
                     }
                 </div>
 
-                <div class="glass-panel" style="padding: 1.5rem;">
-                    <h3 style="font-size: 1.1rem; margin-top: 0; color: var(--neon-purple); margin-bottom: 1rem;">🎤 Claim a Table</h3>
+                <div class="glass-panel" style="padding: 1.5rem; border-color: rgba(255,215,0,0.3); position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1.1rem; margin: 0; color: #ffd700;">⭐ Host a VIP Table</h3>
+                        <span style="font-size: 0.75rem; background: rgba(255,215,0,0.15); color: #ffd700; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold;">PREMIUM GATE</span>
+                    </div>
+
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
                             <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Table Name</label>
@@ -104,6 +120,57 @@
             </div>
         }
     </main>
+
+    <!-- Entitlement Gate Modal -->
+    @if (showGateModal)
+    {
+        <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: fadeIn 0.3s ease-out;">
+            <div class="glass-panel" style="max-width: 480px; width: 90%; padding: 2rem; border-color: #ffd700; box-shadow: 0 0 30px rgba(255, 215, 0, 0.2); border-radius: 16px;">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">👑</div>
+                    <h2 style="font-size: 1.8rem; color: #ffd700; margin: 0;">VIP Table Entitlement Gate</h2>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+                        Hosting custom VIP tables requires a verified Premium subscription via <strong>personalization.dondlingergc.com</strong>.
+                    </p>
+                </div>
+
+                @if (!Identity.IsAuthenticated)
+                {
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <p style="font-size: 0.85rem; color: white; margin: 0; text-align: center;">Sign in or create an account to verify your tier:</p>
+                        @if (!string.IsNullOrEmpty(authErrorMessage))
+                        {
+                            <div style="color: #ff3366; font-size: 0.8rem; text-align: center; background: rgba(255,51,102,0.1); padding: 0.5rem; border-radius: 6px;">@authErrorMessage</div>
+                        }
+                        <input type="email" @bind="authEmail" placeholder="Email address" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white;" />
+                        <input type="password" @bind="authPassword" placeholder="Password" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--surface-border); background: black; color: white;" />
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button class="haptic-btn" @onclick="HandleLogin" style="padding: 0.7rem; border-radius: 6px; border: none; background: var(--neon-blue); color: black; font-family: 'Oswald', sans-serif;">LOG IN</button>
+                            <button class="haptic-btn" @onclick="HandleRegister" style="padding: 0.7rem; border-radius: 6px; border: 1px solid var(--neon-purple); background: transparent; color: var(--neon-purple); font-family: 'Oswald', sans-serif;">REGISTER</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div style="text-align: center; background: rgba(255,215,0,0.05); padding: 1.2rem; border-radius: 8px; border: 1px solid rgba(255,215,0,0.2); margin-bottom: 1.5rem;">
+                        <p style="font-size: 0.9rem; color: white; margin-bottom: 0.5rem;">Logged in as: <strong>@Identity.CurrentUser?.Email</strong></p>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Current Tier: <strong style="color: #ffd700; text-transform: uppercase;">@(Identity.CurrentUser?.SubscriptionTier ?? "STANDARD")</strong></p>
+                        <p style="font-size: 0.8rem; color: #ff3366; margin-top: 0.5rem;">VIP Table Hosting is locked to Premium members.</p>
+                    </div>
+                }
+
+                <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <a href="https://personalization.dondlingergc.com" target="_blank" class="haptic-btn" style="text-align: center; display: block; padding: 0.8rem; border-radius: 8px; background: #ffd700; color: black; text-decoration: none; font-weight: bold; font-family: 'Oswald', sans-serif;">
+                        UPGRADE AT PERSONALIZATION.DONDLINGERGC.COM 🚀
+                    </a>
+                    <button class="haptic-btn" @onclick="() => showGateModal = false" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border); background: transparent; color: var(--text-secondary); font-size: 0.85rem;">
+                        Close & Continue Browsing
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -119,8 +186,14 @@
     private bool isPolling = false;
     private List<string> localPlayedReactions = new();
 
+    private bool showGateModal = false;
+    private string authEmail = "";
+    private string authPassword = "";
+    private string? authErrorMessage = null;
+
     protected override async Task OnInitializedAsync()
     {
+        await Identity.InitializeAsync();
         rooms = await Api.GetRoomsAsync();
         lineups = await Api.GetLineupsAsync();
     }
@@ -128,12 +201,66 @@
     private async Task CreateRoom()
     {
         if (string.IsNullOrWhiteSpace(newRoomName)) return;
+
+        // Entitlement Check: User must be authenticated and Premium
+        if (!Identity.IsAuthenticated || !Identity.IsPremium)
+        {
+            showGateModal = true;
+            StateHasChanged();
+            return;
+        }
+
         var r = await Api.CreateRoomAsync(newRoomName, string.IsNullOrEmpty(selectedLineupId) ? null : selectedLineupId);
         if (r != null)
         {
             newRoomName = "";
             rooms = await Api.GetRoomsAsync();
             await JoinRoom(r);
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        authErrorMessage = null;
+        if (string.IsNullOrWhiteSpace(authEmail) || string.IsNullOrWhiteSpace(authPassword))
+        {
+            authErrorMessage = "Please enter both email and password.";
+            return;
+        }
+
+        var (success, err) = await Identity.LoginAsync(authEmail, authPassword);
+        if (success)
+        {
+            authErrorMessage = null;
+            if (Identity.IsPremium)
+            {
+                showGateModal = false;
+                await CreateRoom();
+            }
+        }
+        else
+        {
+            authErrorMessage = err;
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        authErrorMessage = null;
+        if (string.IsNullOrWhiteSpace(authEmail) || string.IsNullOrWhiteSpace(authPassword))
+        {
+            authErrorMessage = "Please enter both email and password.";
+            return;
+        }
+
+        var (success, err) = await Identity.RegisterAsync(authEmail, authPassword);
+        if (success)
+        {
+            authErrorMessage = null;
+        }
+        else
+        {
+            authErrorMessage = err;
         }
     }
 
@@ -162,17 +289,14 @@
                 var polled = await Api.PollRoomAsync(activeRoom.Id);
                 if (polled != null)
                 {
-                    // Check index changes
                     if (polled.CurrentJokeIndex != activeJokeIndex)
                     {
                         activeJokeIndex = polled.CurrentJokeIndex;
                         StateHasChanged();
                     }
 
-                    // Check reactions and trigger synth sounds locally
                     foreach (var reaction in polled.Reactions)
                     {
-                        // We play it locally
                         _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", reaction);
                     }
                 }
@@ -182,7 +306,7 @@
                 Console.WriteLine("Polling error: " + ex.Message);
             }
 
-            await Task.Delay(1500); // Poll every 1.5s
+            await Task.Delay(1500);
         }
     }
 
@@ -193,7 +317,7 @@
         int nextIndex = activeJokeIndex + 1;
         if (nextIndex >= activeLineup.Jokes.Count)
         {
-            nextIndex = 0; // Loop back
+            nextIndex = 0;
         }
 
         activeJokeIndex = nextIndex;
@@ -205,7 +329,6 @@
     {
         if (activeRoom == null) return;
         await Api.ReactRoomAsync(activeRoom.Id, type);
-        // Play locally immediately
         _ = JS.InvokeVoidAsync("audioInterop.playSynthSound", type);
     }
 

@@ -12,11 +12,13 @@ export { ComedianDO } from './comedian_do';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('/*', cors());
+app.use('/*', cors({ origin: '*' }));
 app.use('/*', async (c, next) => {
   await next();
-  c.header('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' blob: data:; script-src * 'unsafe-inline' 'unsafe-eval' blob:; connect-src * blob: data:; media-src * blob: data:; style-src * 'unsafe-inline'; worker-src * blob:;");
-  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Content-Security-Policy', "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; connect-src 'self' wss: https: blob: data:; media-src 'self' blob: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-ancestors 'none'; object-src 'none';");
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
 });
 
 // 1. GET /api/jokes — List comedy sets stored in D1
@@ -66,7 +68,39 @@ app.get('/api/jokes/:id/audio', async (c) => {
   });
 });
 
-// 3. POST /api/comedians/:username/trigger — Direct ComedianDO generation
+// 3. GET /api/stage/live — Active MMO Main Stage Broadcast State
+app.get('/api/stage/live', async (c) => {
+  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
+  const stub = c.env.COMEDIAN_DO.get(id);
+  return stub.fetch(new Request('http://do/stage/live', { method: 'GET' }));
+});
+
+// 3b. GET /api/stage/ws — Active MMO Main Stage WebSocket Connection
+app.get('/api/stage/ws', async (c) => {
+  if (c.req.header('Upgrade') !== 'websocket') {
+    return c.text('Expected Upgrade: websocket', 426);
+  }
+  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
+  const stub = c.env.COMEDIAN_DO.get(id);
+  return stub.fetch(c.req.raw);
+});
+
+
+// 4. POST /api/stage/react — Broadcast live crowd reaction
+app.post('/api/stage/react', async (c) => {
+  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
+  const stub = c.env.COMEDIAN_DO.get(id);
+  return stub.fetch(new Request('http://do/stage/react', { method: 'POST', body: c.req.raw.body }));
+});
+
+// 5. POST /api/stage/chat — Post audience chat message
+app.post('/api/stage/chat', async (c) => {
+  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
+  const stub = c.env.COMEDIAN_DO.get(id);
+  return stub.fetch(new Request('http://do/stage/chat', { method: 'POST', body: c.req.raw.body }));
+});
+
+// 6. POST /api/comedians/:username/trigger — Direct ComedianDO generation
 app.post('/api/comedians/:username/trigger', async (c) => {
   const username = c.req.param('username');
   const id = c.env.COMEDIAN_DO.idFromName(username);
@@ -77,7 +111,7 @@ app.post('/api/comedians/:username/trigger', async (c) => {
   return stub.fetch(new Request(url.toString(), { method: 'POST' }));
 });
 
-// 4. POST /api/comedians/:username/schedule — Schedule autonomous generation alarm
+// 7. POST /api/comedians/:username/schedule — Schedule autonomous generation alarm
 app.post('/api/comedians/:username/schedule', async (c) => {
   const username = c.req.param('username');
   const id = c.env.COMEDIAN_DO.idFromName(username);

@@ -87,4 +87,40 @@ namespace Heckler.Frontend.Models
         [JsonPropertyName("content")]
         public string Content { get; set; } = "";
     }
+
+    public class LiveStageState
+    {
+        [JsonPropertyName("jokeId")]
+        public string JokeId { get; set; } = "";
+        [JsonPropertyName("performer")]
+        public string Performer { get; set; } = "";
+        [JsonPropertyName("text")]
+        public string Text { get; set; } = "";
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = "";
+        [JsonPropertyName("hasAudio")]
+        public bool HasAudio { get; set; }
+        [JsonPropertyName("audioUrl")]
+        public string AudioUrl { get; set; } = "";
+        [JsonPropertyName("startedAt")]
+        public long StartedAt { get; set; }
+        [JsonPropertyName("durationMs")]
+        public long DurationMs { get; set; }
+        [JsonPropertyName("listenersCount")]
+        public int ListenersCount { get; set; }
+        [JsonPropertyName("reactions")]
+        public Dictionary<string, int> Reactions { get; set; } = new();
+        [JsonPropertyName("chatMessages")]
+        public List<StageChatMessage> ChatMessages { get; set; } = new();
+    }
+
+    public class StageChatMessage
+    {
+        [JsonPropertyName("username")]
+        public string Username { get; set; } = "";
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = "";
+        [JsonPropertyName("timestamp")]
+        public string Timestamp { get; set; } = "";
+    }
 }

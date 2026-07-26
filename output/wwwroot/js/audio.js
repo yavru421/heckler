@@ -21,23 +21,42 @@ window.audioInterop = {
         unlockAudio();
     },
 
-    // Play MP3 audio cleanly over URL endpoint
+    // Play MP3 audio cleanly over URL endpoint with content-type verification
     playAudioUrl: async function (url) {
-        return new Promise((resolve) => {
-            const audio = new Audio(url);
-            audio.onended = () => resolve(true);
-            audio.onerror = (e) => {
-                console.warn("MP3 Audio endpoint failed/empty, falling back to TTS:", e);
-                resolve(false);
-            };
-            audio.play().catch(e => {
-                console.warn("MP3 Audio playback failed, falling back to TTS:", e);
-                resolve(false);
-            });
+        return new Promise(async (resolve) => {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const contentType = response.headers.get("content-type") || "";
+                    if (contentType.includes("audio")) {
+                        const blob = await response.blob();
+                        if (blob && blob.size > 200) {
+                            const objectUrl = URL.createObjectURL(blob);
+                            const audio = new Audio(objectUrl);
+                            audio.onended = () => {
+                                URL.revokeObjectURL(objectUrl);
+                                resolve(true);
+                            };
+                            audio.onerror = () => {
+                                URL.revokeObjectURL(objectUrl);
+                                resolve(false);
+                            };
+                            audio.play().then(() => {}).catch(() => {
+                                URL.revokeObjectURL(objectUrl);
+                                resolve(false);
+                            });
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                Console.warn("Fetch audio endpoint failed:", err);
+            }
+            resolve(false);
         });
     },
 
-    // Stream /api/tts directly over HTML5 Audio (new Audio())
+    // Stream /api/tts directly over HTML5 Audio with Web Speech API fallback
     speakText: async function (text) {
         return new Promise(async (resolve) => {
             try {
@@ -48,30 +67,49 @@ window.audioInterop = {
                 });
 
                 if (response.ok) {
-                    const blob = await response.blob();
-                    if (blob && blob.size > 200) {
-                        const objectUrl = URL.createObjectURL(blob);
-                        const audio = new Audio(objectUrl);
-                        audio.onended = () => {
-                            URL.revokeObjectURL(objectUrl);
-                            resolve(true);
-                        };
-                        audio.onerror = () => {
-                            URL.revokeObjectURL(objectUrl);
-                            resolve(false);
-                        };
-                        audio.play().catch(() => {
-                            URL.revokeObjectURL(objectUrl);
-                            resolve(false);
-                        });
-                        return;
+                    const contentType = response.headers.get("content-type") || "";
+                    if (contentType.includes("audio")) {
+                        const blob = await response.blob();
+                        if (blob && blob.size > 200) {
+                            const objectUrl = URL.createObjectURL(blob);
+                            const audio = new Audio(objectUrl);
+                            audio.onended = () => {
+                                URL.revokeObjectURL(objectUrl);
+                                resolve(true);
+                            };
+                            audio.onerror = () => {
+                                URL.revokeObjectURL(objectUrl);
+                                resolve(false);
+                            };
+                            audio.play().then(() => {}).catch(() => {
+                                URL.revokeObjectURL(objectUrl);
+                                resolve(false);
+                            });
+                            return;
+                        }
                     }
                 }
             } catch (err) {
                 console.warn("/api/tts failed:", err);
             }
+
+            // Web Speech API fallback
+            if ('speechSynthesis' in window) {
+                try {
+                    window.speechSynthesis.cancel();
+                    const cleanText = text.replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ").replace(/[#*$_[\](){}]/g, "").replace(/\s+/g, " ").trim();
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.rate = 1.0;
+                    utterance.onend = () => resolve(true);
+                    utterance.onerror = () => resolve(false);
+                    window.speechSynthesis.speak(utterance);
+                    return;
+                } catch (e) {
+                    console.warn("SpeechSynthesis failed:", e);
+                }
+            }
+
             resolve(false);
         });
     }
 };
-
