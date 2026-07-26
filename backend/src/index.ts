@@ -77,6 +77,17 @@ app.post('/api/comedians/:username/trigger', async (c) => {
   return stub.fetch(new Request(url.toString(), { method: 'POST' }));
 });
 
+// 4. POST /api/comedians/:username/schedule — Schedule autonomous generation alarm
+app.post('/api/comedians/:username/schedule', async (c) => {
+  const username = c.req.param('username');
+  const id = c.env.COMEDIAN_DO.idFromName(username);
+  const stub = c.env.COMEDIAN_DO.get(id);
+  const url = new URL(c.req.url);
+  url.pathname = `/schedule`;
+  url.searchParams.set('username', username);
+  return stub.fetch(new Request(url.toString(), { method: 'POST' }));
+});
+
 // 4. POST /api/tts — Direct TTS endpoint fallback
 app.post('/api/tts', async (c) => {
   try {
