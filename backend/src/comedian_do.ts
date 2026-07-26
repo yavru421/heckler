@@ -121,23 +121,59 @@ export class ComedianDO extends DurableObject {
 
       // If no broadcast or expired, trigger next joke set
       if (!stageState || (stageState.startedAt + stageState.durationMs < now)) {
+        const lastGenAt: number = (await this.state.storage.get("lastGenAt")) || 0;
         const comedians = ["NeonMike", "SpicySarah", "QuantumQuentin"];
         const comic = comedians[Math.floor(Math.random() * comedians.length)];
-        const joke = await this.generateJokeAndTTS(comic);
+        let joke: any = null;
+
+        // Cap LLM + TTS generation to 20 new jokes per hour (min 180,000ms = 3 mins between new LLM runs)
+        if (now - lastGenAt > 180000 || !stageState) {
+          try {
+            joke = await this.generateJokeAndTTS(comic);
+            await this.state.storage.put("lastGenAt", now);
+          } catch (e) {
+            console.warn("LLM/TTS gen error, falling back to D1 pool:", e);
+          }
+        }
+
+        // Pool Reuse: Fetch a random existing joke from D1 ledger to keep stage lively without burning Neurons
+        if (!joke) {
+          try {
+            const pool: any = await this.env.DB.prepare(
+              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 1"
+            ).first();
+
+            if (pool) {
+              joke = {
+                id: pool.id,
+                text: pool.text,
+                category: pool.category || "Stand-up",
+                has_audio: true,
+                author_name: pool.author_name || comic
+              };
+            }
+          } catch (dbErr) {}
+
+          // Ultimate fallback if D1 empty
+          if (!joke) {
+            joke = await this.generateJokeAndTTS(comic);
+            await this.state.storage.put("lastGenAt", now);
+          }
+        }
         
         stageState = {
           jokeId: joke.id,
-          performer: comic,
+          performer: joke.author_name || comic,
           text: joke.text,
           category: joke.category,
-          hasAudio: joke.has_audio,
+          hasAudio: Boolean(joke.has_audio),
           audioUrl: `api/jokes/${joke.id}/audio`,
           startedAt: now,
-          durationMs: 25000, // 25s set length
+          durationMs: 30000, // 30s set duration per rotation
           listenersCount: Math.floor(Math.random() * 15) + 32,
           reactions: { laugh: 0, clap: 0, boo: 0 },
           chatMessages: [
-            { username: "ClubHost", message: `Welcome everyone to the Main Stage! ${comic} is taking the mic.`, timestamp: new Date().toLocaleTimeString() }
+            { username: "ClubHost", message: `Up next on the Main Stage: ${joke.author_name || comic}!`, timestamp: new Date().toLocaleTimeString() }
           ]
         };
         await this.state.storage.put("stageState", stageState);
