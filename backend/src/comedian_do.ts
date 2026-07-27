@@ -129,9 +129,10 @@ export class ComedianDO extends DurableObject {
         // Daily Safety Gate: Max 200 new AI generations per day (resets daily) to guarantee $0 Neurons bill
         const todayKey = `dailyGenCount_${new Date().toISOString().split("T")[0]}`;
         const dailyCount: number = (await this.state.storage.get(todayKey)) || 0;
+        let lastPlayedIds: string[] = (await this.state.storage.get("lastPlayedIds")) || [];
 
-        // Cap new AI generation: Only trigger if >3 mins since last AND <200 daily generations
-        if ((now - lastGenAt > 180000 && dailyCount < 200) || !stageState) {
+        // Always generate a fresh AI joke set on stage transition as long as daily count is < 200
+        if (dailyCount < 200 || !stageState) {
           try {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
@@ -141,15 +142,18 @@ export class ComedianDO extends DurableObject {
           }
         }
 
-        // Pure R2 Pool Recycling (Zero AI Neurons Burn): Serve verified pre-recorded audio from R2
+        // Pure R2 Pool Recycling (Zero AI Neurons Burn): Serve non-recently played audio from R2
         if (!joke) {
           try {
             const candidates: any = await this.env.DB.prepare(
-              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 15"
+              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 25"
             ).all();
 
             if (candidates && candidates.results && candidates.results.length > 0) {
               for (const cand of candidates.results) {
+                // Skip if played recently in the last 15 sets
+                if (lastPlayedIds.includes(cand.id)) continue;
+
                 const r2Key = `audio/${cand.id}.mp3`;
                 let hasR2Audio = false;
                 if (this.env.AUDIO_BUCKET) {
@@ -173,13 +177,18 @@ export class ComedianDO extends DurableObject {
             console.warn("R2 pool recycling error:", dbErr);
           }
 
-          // Emergency fallback if R2 empty: Generate single set and increment daily counter
+          // Emergency fallback if all R2 candidates recently played: Generate new set
           if (!joke) {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
             await this.state.storage.put(todayKey, dailyCount + 1);
           }
         }
+
+        // Track recently played history (keep last 15 joke IDs)
+        lastPlayedIds.push(joke.id);
+        if (lastPlayedIds.length > 15) lastPlayedIds.shift();
+        await this.state.storage.put("lastPlayedIds", lastPlayedIds);
         
         stageState = {
           jokeId: joke.id,
