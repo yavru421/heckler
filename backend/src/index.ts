@@ -6,6 +6,7 @@ export interface Env {
   ASSETS: any;
   AI: any;
   COMEDIAN_DO: DurableObjectNamespace;
+  AUDIO_BUCKET: R2Bucket;
 }
 
 export { ComedianDO } from './comedian_do';
@@ -41,9 +42,26 @@ app.get('/api/jokes', async (c) => {
   return c.json(mappedJokes);
 });
 
-// 2. GET /api/jokes/:id/audio — Stream stored MP3 audio cleanly
+// 2. GET /api/jokes/:id/audio — Stream stored MP3 audio cleanly from R2 Object Storage
 app.get('/api/jokes/:id/audio', async (c) => {
   const id = c.req.param('id');
+  const r2Key = `audio/${id}.mp3`;
+
+  // Attempt 1: Fetch directly from Cloudflare R2 bucket (fastest, zero DB lag)
+  if (c.env.AUDIO_BUCKET) {
+    const object = await c.env.AUDIO_BUCKET.get(r2Key);
+    if (object) {
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set('Content-Type', 'audio/mpeg');
+      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+      headers.set('Access-Control-Allow-Origin', '*');
+      headers.set('etag', object.httpEtag);
+      return new Response(object.body, { headers });
+    }
+  }
+
+  // Attempt 2: D1 DB fallback for legacy entries
   const result: any = await c.env.DB.prepare('SELECT audio_data FROM jokes WHERE id = ?').bind(id).first();
   if (!result || !result.audio_data) {
     return c.text('Audio not found', 404);
@@ -53,15 +71,9 @@ app.get('/api/jokes/:id/audio', async (c) => {
     return c.text('Audio empty', 404);
   }
 
-  const bytes = new Uint8Array(buffer.slice(0, 4));
-  let contentType = 'audio/mpeg';
-  if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
-    contentType = 'audio/webm';
-  }
-
   return new Response(buffer, {
     headers: {
-      'Content-Type': contentType,
+      'Content-Type': 'audio/mpeg',
       'Cache-Control': 'public, max-age=31536000, immutable',
       'Access-Control-Allow-Origin': '*'
     }

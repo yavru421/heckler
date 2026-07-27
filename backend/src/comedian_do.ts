@@ -377,8 +377,17 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
       console.error("TTS synthesis pipeline error:", e);
     }
 
-    // ── 4. Persist to D1 ─────────────────────────────────────────
-    // Build segment metadata (timing info for frontend speakText)
+    // ── 4. Persist Audio to R2 Bucket & Metadata to D1 ─────────────
+    if (audioBuffer && this.env.AUDIO_BUCKET) {
+      try {
+        await this.env.AUDIO_BUCKET.put(`audio/${jokeId}.mp3`, audioBuffer, {
+          httpMetadata: { contentType: "audio/mpeg" }
+        });
+      } catch (r2Err) {
+        console.error("Failed to upload audio to R2 bucket:", r2Err);
+      }
+    }
+
     const segmentMeta = segments.map((s) => ({
       type: s.type,
       text: s.text || undefined,
