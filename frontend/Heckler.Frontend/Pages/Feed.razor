@@ -18,6 +18,10 @@
             <span>@(stageState?.ListenersCount ?? 42) LISTENERS IN VENUE</span>
         </div>
 
+        <div class="next-joke-countdown">
+            <span class="timer-icon">⏳</span> NEXT SET IN: <strong class="timer-seconds">@(GetSecondsRemaining())s</strong>
+        </div>
+
         <div class="vip-table-promo">
             <span class="vip-badge">⭐ VIP FEATURE</span>
             <a href="/rooms" class="btn-vip">Host a Table</a>
@@ -167,6 +171,28 @@
     .broadcast-title { font-family: 'Oswald', sans-serif; letter-spacing: 2px; color: var(--neon-purple); font-weight: 700; }
     .presence-badge { font-size: 0.85rem; color: var(--neon-blue); font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
 
+    .next-joke-countdown {
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        color: #ffd700;
+        background: rgba(255, 215, 0, 0.1);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .timer-seconds {
+        font-size: 1.1rem;
+        color: var(--neon-green);
+        min-width: 28px;
+        display: inline-block;
+        text-align: center;
+    }
+
     .vip-table-promo { display: flex; align-items: center; gap: 0.5rem; }
     .vip-badge { font-size: 0.7rem; background: rgba(255, 215, 0, 0.15); color: #ffd700; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold; }
     .btn-vip { color: white; text-decoration: none; font-size: 0.85rem; font-family: 'Oswald', sans-serif; border: 1px solid rgba(255,215,0,0.4); padding: 0.3rem 0.8rem; border-radius: 6px; }
@@ -313,6 +339,24 @@
         await JS.InvokeVoidAsync("audioInterop.registerProgressCallback", objRef);
         await PollStageAsync();
         _ = StartPollingLoop();
+        _ = StartUiTickerLoop();
+    }
+
+    private int GetSecondsRemaining()
+    {
+        if (stageState == null || stageState.StartedAt == 0 || stageState.DurationMs == 0) return 0;
+        long elapsedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - stageState.StartedAt;
+        long remainingMs = stageState.DurationMs - elapsedMs;
+        return (int)Math.Max(0, Math.Ceiling(remainingMs / 1000.0));
+    }
+
+    private async Task StartUiTickerLoop()
+    {
+        while (isPolling)
+        {
+            await Task.Delay(1000);
+            StateHasChanged();
+        }
     }
 
     [JSInvokable]
