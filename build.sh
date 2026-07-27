@@ -16,9 +16,9 @@ chmod +x dotnet-install.sh
 chmod -R +x ./dotnet/
 
 # Clean old output and local build artifacts to force a complete recompilation
-rm -rf output
-rm -rf frontend/Heckler.Frontend/bin
-rm -rf frontend/Heckler.Frontend/obj
+rm -rf output || true
+rm -rf frontend/Heckler.Frontend/bin || true
+rm -rf frontend/Heckler.Frontend/obj || true
 
 # Install backend dependencies
 cd backend && npm ci && cd ..
