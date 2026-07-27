@@ -152,7 +152,9 @@ export class ComedianDO extends DurableObject {
                 author_name: pool.author_name || comic
               };
             }
-          } catch (dbErr) {}
+          } catch (dbErr) {
+            console.warn("D1 pool query error:", dbErr);
+          }
 
           // Ultimate fallback if D1 has no valid audio entries yet
           if (!joke) {

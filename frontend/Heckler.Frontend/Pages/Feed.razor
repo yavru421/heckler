@@ -1,6 +1,7 @@
 @page "/"
 @inject HecklerApi Api
 @inject IdentityService Identity
+@inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -363,14 +364,19 @@
 
     private async Task PlayCurrentBroadcastAudio()
     {
-        if (stageState == null) return;
+        if (stageState == null || string.IsNullOrEmpty(stageState.AudioUrl)) return;
         await JS.InvokeVoidAsync("audioInterop.unlockAudio");
-        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", stageState.AudioUrl);
+        
+        string fullAudioUrl = stageState.AudioUrl.StartsWith("http") 
+            ? stageState.AudioUrl 
+            : Nav.BaseUri.TrimEnd('/') + "/" + stageState.AudioUrl.TrimStart('/');
+
+        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", fullAudioUrl);
         if (!played)
         {
             // Retry fetch after 500ms brief buffer sync if initial fetch fails
             await Task.Delay(500);
-            await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", stageState.AudioUrl);
+            await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", fullAudioUrl);
         }
     }
 
