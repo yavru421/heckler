@@ -160,6 +160,38 @@ app.post('/api/tts', async (c) => {
   }
 });
 
+// 5. POST /api/migrate-d1-to-r2 — Migrate existing audio blobs from D1 to R2 bucket
+app.post('/api/migrate-d1-to-r2', async (c) => {
+  try {
+    const { results: jokes } = await c.env.DB.prepare(
+      'SELECT id, audio_data FROM jokes WHERE audio_data IS NOT NULL AND length(audio_data) > 500'
+    ).all();
+
+    let migratedCount = 0;
+    if (jokes && jokes.length > 0) {
+      for (const joke of jokes) {
+        const id = joke.id;
+        const buffer = joke.audio_data as ArrayBuffer;
+        if (buffer && buffer.byteLength > 500) {
+          const r2Key = `audio/${id}.mp3`;
+          await c.env.AUDIO_BUCKET.put(r2Key, buffer, {
+            httpMetadata: { contentType: 'audio/mpeg' }
+          });
+          migratedCount++;
+        }
+      }
+    }
+
+    return c.json({
+      success: true,
+      migratedCount,
+      message: `Successfully migrated ${migratedCount} historical audio tracks from D1 to R2 storage.`
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 app.notFound((c) => {
   if (c.env.ASSETS && typeof c.env.ASSETS.fetch === 'function') {
     return c.env.ASSETS.fetch(c.req.raw);
