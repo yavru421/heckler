@@ -334,10 +334,10 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
         .trim();
 
       if (cleanText) {
-        // Attempt 1: Deepgram Aura-1
+        // Attempt 1: Deepgram Aura-2 English (Higher Quality, 40+ Voices)
         try {
           const ttsResponse = await this.env.AI.run(
-            "@cf/deepgram/aura-1",
+            "@cf/deepgram/aura-2-en",
             { text: cleanText, speaker },
             { returnRawResponse: true }
           );

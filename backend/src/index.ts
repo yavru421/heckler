@@ -132,7 +132,7 @@ app.post('/api/tts', async (c) => {
     if (!text) return c.text('Text is required', 400);
 
     const cleanText = text.replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ").replace(/[#*$_[\](){}]/g, "").replace(/\s+/g, " ").trim();
-    const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-1", { text: cleanText, speaker }, { returnRawResponse: true });
+    const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-2-en", { text: cleanText, speaker }, { returnRawResponse: true });
     
     if (ttsResponse.ok) {
       const audioBuffer = await ttsResponse.arrayBuffer();
