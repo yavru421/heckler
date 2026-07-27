@@ -233,11 +233,9 @@ export class ComedianDO extends DurableObject {
             audioUrl: `/api/jokes/${joke.id}/audio`,
             startedAt: now,
             durationMs,
-            listenersCount: Math.floor(Math.random() * 18) + 42,
+            listenersCount: Math.max(1, this.ctx.getWebSockets().length),
             reactions: { laugh: 0, clap: 0, boo: 0 },
-            chatMessages: [
-              { username: "ClubHost", message: chosenIntro, timestamp: new Date().toLocaleTimeString() }
-            ]
+            chatMessages: stageState?.chatMessages || []
           };
           await this.state.storage.put("stageState", stageState);
 
@@ -248,6 +246,10 @@ export class ComedianDO extends DurableObject {
             try { socket.send(wsPayload); } catch(e) {}
           }
         }
+      }
+
+      if (stageState) {
+        stageState.listenersCount = Math.max(1, this.ctx.getWebSockets().length);
       }
 
       return new Response(JSON.stringify(stageState), {
@@ -282,14 +284,57 @@ export class ComedianDO extends DurableObject {
         const body: any = await request.json();
         let stageState: any = await this.state.storage.get("stageState");
         if (stageState) {
+          const userMsgText = body.message || "";
           const msg = {
             username: body.username || "Listener",
-            message: body.message || "",
+            message: userMsgText,
             timestamp: new Date().toLocaleTimeString()
           };
           stageState.chatMessages.push(msg);
-          if (stageState.chatMessages.length > 25) stageState.chatMessages.shift(); // Keep last 25
+          if (stageState.chatMessages.length > 25) stageState.chatMessages.shift();
           await this.state.storage.put("stageState", stageState);
+
+          // Asynchronously reply as the performing AI Comedian (ComedianDO)
+          const comicName = stageState.performer || "NeonMike";
+          const profile = COMEDIAN_PROFILES[comicName];
+          const archetypeKey = profile ? profile.archetypeKey : "deadpan_cynic";
+          const archetype = ARCHETYPES[archetypeKey] || ARCHETYPES["deadpan_cynic"];
+
+          this.ctx.waitUntil((async () => {
+            try {
+              const replyResp = await this.env.AI.run(
+                "@cf/meta/llama-3.1-8b-instruct-fast",
+                {
+                  messages: [
+                    { role: "system", content: `${archetype.systemPrompt}\nYou are currently performing live on stage as ${comicName}. An audience member named ${msg.username} just heckled or said: "${userMsgText}". Respond with a fast, funny, witty 1-2 sentence comeback in your comedic character. Stay in character! No emojis.` },
+                    { role: "user", content: userMsgText }
+                  ],
+                  temperature: 0.9,
+                  max_tokens: 80
+                }
+              );
+
+              let comebackText = "";
+              if (typeof replyResp === "string") comebackText = replyResp;
+              else if (replyResp && typeof replyResp === "object") comebackText = replyResp.response || replyResp.result || "";
+
+              comebackText = comebackText.trim();
+              if (comebackText) {
+                let currentStage: any = await this.state.storage.get("stageState");
+                if (currentStage) {
+                  currentStage.chatMessages.push({
+                    username: comicName,
+                    message: comebackText,
+                    timestamp: new Date().toLocaleTimeString()
+                  });
+                  if (currentStage.chatMessages.length > 25) currentStage.chatMessages.shift();
+                  await this.state.storage.put("stageState", currentStage);
+                }
+              }
+            } catch (e) {
+              console.error("Comedian chat response error:", e);
+            }
+          })());
         }
         return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
       } catch (e: any) {
