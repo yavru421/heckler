@@ -296,23 +296,36 @@ export class ComedianDO extends DurableObject {
     const archetype = ARCHETYPES[archetypeKey] || ARCHETYPES["deadpan_cynic"];
 
     const categories = profile ? profile.categories : CATEGORIES;
-    const category = customTopic || categories[Math.floor(Math.random() * categories.length)];
+    const baseCategory = customTopic || categories[Math.floor(Math.random() * categories.length)];
+
+    const subTopics: Record<string, string[]> = {
+      technology: ["smart appliances judging you", "software updates at bad times", "AI replacing ridiculous jobs", "passwords and 2FA nightmare", "Bluetooth dropping connection", "smart watches warning about heart rate"],
+      relationships: ["online dating profile lies", "unwritten rules of texting back", "meeting the in-laws", "couples grocery shopping arguments", "being single in your 30s", "first dates at loud restaurants"],
+      food: ["artisanal coffee shop sizes", "meal prep containers taking over fridge", "ghost kitchens and food delivery apps", "fancy restaurants with tiny portions", "diet trends that make no sense", "grocery store self-checkout machines"],
+      work: ["corporate buzzwords and emails", "zoom calls with background noise", "open-plan offices", "performance reviews", "leaving work early on Friday", "slacking off on company Wi-Fi"],
+      existential: ["getting old suddenly", "staring at ceiling at 3 AM", "realizing nobody knows what they are doing", "time moving faster every year", "buying things to feel fulfilled"],
+      traffic: ["roundabouts nobody knows how to use", "parallel parking with witnesses", "navigation GPS recalculating", "people who don't use turn signals", "gas station pumps asking questions"],
+      "social-media": ["people posting workout videos", "targeted ads knowing your thoughts", "unfollowing high school classmates", "doomscrolling at midnight", "influencer apology videos"],
+      pets: ["cats staring at blank walls", "dogs barking at air", "vet bill costs", "buying expensive pet beds they ignore", "dog owners talking for their pets"],
+      health: ["going to gym for first time in years", "web doctor diagnosing mild cough", "stretching and injuring yourself", "buying supplements you never take", "drinking 8 glasses of water"]
+    };
+
+    const topicList = subTopics[baseCategory] || subTopics["technology"];
+    const specificPremise = topicList[Math.floor(Math.random() * topicList.length)];
 
     // ── 1. Generate joke text via Llama 3.1 ──────────────────────
-    const userPrompt = `You are ${username}, a standup comedian performing live.
+    const userPrompt = `You are ${username}, a standup comedian performing live in a comedy club.
 Style: ${archetype.name}
-Topic: ${category}
+Category: ${baseCategory}
+Specific Premise: ${specificPremise}
 
 [RULES]
 1. NEVER write puns. Puns bomb every time.
-2. NEVER use these cliché openings: "Have you ever noticed...", "So I was thinking...", "Why do they call it...", "What's the deal with..."
-3. The joke MUST have three parts: a SETUP (establish a relatable premise), a MISDIRECTION (build tension or set a false expectation), and a PUNCHLINE (subvert the expectation).
-4. Do NOT include any stage directions, greetings, sign-offs, markdown formatting, or metadata.
-5. Insert [PAUSE:X.X] tags (where X.X is seconds, between 0.5 and 2.5) at points where comedic timing demands a beat — typically right before the punchline and after it lands.
-6. Output ONLY the raw joke text with embedded [PAUSE] tags. Nothing else.
-
-Example format:
-I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it sent me an alert: "Unrecognized person at the door." [PAUSE:1.5] It was me. Without coffee.`;
+2. NEVER use cliché openings like "Have you ever noticed...", "So I was thinking...", "Why do they call it...", "What's the deal with...".
+3. Write a BRAND NEW, completely original 2 to 4 sentence standup routine about ${specificPremise}.
+4. The joke MUST have a clear SETUP (relatable premise) and PUNCHLINE (unforeseen misdirection).
+5. Insert [PAUSE:1.0] or [PAUSE:1.5] tags right before the punchline lands.
+6. Output ONLY the raw joke text with embedded [PAUSE] tags. Nothing else.`;
 
     const aiResponse = await this.env.AI.run(
       "@cf/meta/llama-3.1-8b-instruct-fast",
@@ -321,6 +334,8 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
           { role: "system", content: archetype.systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        temperature: 0.85 + Math.random() * 0.13,
+        max_tokens: 220
       }
     );
 
