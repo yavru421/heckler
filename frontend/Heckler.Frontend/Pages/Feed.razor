@@ -318,10 +318,11 @@
         if (stageState == null) return;
         await JS.InvokeVoidAsync("audioInterop.unlockAudio");
         var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", stageState.AudioUrl);
-        if (!played && !string.IsNullOrEmpty(stageState.Text))
+        if (!played)
         {
-            bool isFemale = stageState.Performer != null && stageState.Performer.ToLower().Contains("sarah");
-            await JS.InvokeAsync<bool>("audioInterop.speakText", stageState.Text, isFemale);
+            // Retry fetch after 500ms brief buffer sync if initial fetch fails
+            await Task.Delay(500);
+            await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", stageState.AudioUrl);
         }
     }
 

@@ -167,13 +167,13 @@ export class ComedianDO extends DurableObject {
           text: joke.text,
           category: joke.category,
           hasAudio: Boolean(joke.has_audio),
-          audioUrl: `api/jokes/${joke.id}/audio`,
+          audioUrl: `/api/jokes/${joke.id}/audio`,
           startedAt: now,
-          durationMs: 30000, // 30s set duration per rotation
+          durationMs: 45000, // 45s stage set duration to guarantee full performance completes before transition
           listenersCount: Math.floor(Math.random() * 15) + 32,
           reactions: { laugh: 0, clap: 0, boo: 0 },
           chatMessages: [
-            { username: "ClubHost", message: `Up next on the Main Stage: ${joke.author_name || comic}!`, timestamp: new Date().toLocaleTimeString() }
+            { username: "ClubHost", message: `👏 Give it up for ${joke.author_name || comic}! Taking the stage now...`, timestamp: new Date().toLocaleTimeString() }
           ]
         };
         await this.state.storage.put("stageState", stageState);
