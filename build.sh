@@ -20,8 +20,10 @@ rm -rf output || true
 rm -rf frontend/Heckler.Frontend/bin || true
 rm -rf frontend/Heckler.Frontend/obj || true
 
-# Install backend dependencies
-cd backend && npm ci && cd ..
+# Install backend dependencies if missing
+if [ ! -d "backend/node_modules" ]; then
+  cd backend && npm ci && cd ..
+fi
 
 # Publish the application using the local SDK installation without runtime relinking (emcc/wasm-tools)
 ./dotnet/dotnet publish frontend/Heckler.Frontend/Heckler.Frontend.csproj -c Release -o output -p:UsingBrowserRuntimeWorkload=false -p:PublishTrimmed=false

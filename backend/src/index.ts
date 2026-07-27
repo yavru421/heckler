@@ -42,42 +42,64 @@ app.get('/api/jokes', async (c) => {
   return c.json(mappedJokes);
 });
 
-// 2. GET /api/jokes/:id/audio — Stream stored MP3 audio cleanly from R2 Object Storage
+// 2. GET /api/jokes/:id/audio — Stream stored MP3 audio cleanly from R2 Object Storage with byte-range support
 app.get('/api/jokes/:id/audio', async (c) => {
   const id = c.req.param('id');
   const r2Key = `audio/${id}.mp3`;
+  const rangeHeader = c.req.header('range');
 
-  // Attempt 1: Fetch directly from Cloudflare R2 bucket (fastest, zero DB lag)
+  // Attempt 1: Fetch directly from Cloudflare R2 bucket (fastest, zero DB lag) with Range header support
   if (c.env.AUDIO_BUCKET) {
-    const object = await c.env.AUDIO_BUCKET.get(r2Key);
-    if (object) {
-      const headers = new Headers();
-      object.writeHttpMetadata(headers);
-      headers.set('Content-Type', 'audio/mpeg');
-      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-      headers.set('Access-Control-Allow-Origin', '*');
-      headers.set('etag', object.httpEtag);
-      return new Response(object.body, { headers });
+    try {
+      const getOptions: R2GetOptions = rangeHeader ? { range: c.req.raw.headers } : {};
+      const object = await c.env.AUDIO_BUCKET.get(r2Key, getOptions);
+
+      if (object) {
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set('Content-Type', 'audio/mpeg');
+        headers.set('Accept-Ranges', 'bytes');
+        headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+        headers.set('Access-Control-Allow-Origin', '*');
+        headers.set('etag', object.httpEtag);
+        headers.set('Content-Length', object.size.toString());
+
+        const status = object.range ? 206 : 200;
+
+        return new Response(object.body, {
+          status,
+          headers
+        });
+      }
+    } catch (r2Err) {
+      console.warn('R2 bucket fetch error:', r2Err);
     }
   }
 
   // Attempt 2: D1 DB fallback for legacy entries
-  const result: any = await c.env.DB.prepare('SELECT audio_data FROM jokes WHERE id = ?').bind(id).first();
-  if (!result || !result.audio_data) {
-    return c.text('Audio not found', 404);
-  }
-  const buffer = result.audio_data as ArrayBuffer;
-  if (!buffer || buffer.byteLength === 0) {
-    return c.text('Audio empty', 404);
-  }
-
-  return new Response(buffer, {
-    headers: {
-      'Content-Type': 'audio/mpeg',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      'Access-Control-Allow-Origin': '*'
+  try {
+    const result: any = await c.env.DB.prepare('SELECT audio_data FROM jokes WHERE id = ?').bind(id).first();
+    if (!result || !result.audio_data) {
+      return c.text('Audio not found', 404);
     }
-  });
+    const buffer = result.audio_data as ArrayBuffer;
+    if (!buffer || buffer.byteLength === 0) {
+      return c.text('Audio empty', 404);
+    }
+
+    return new Response(buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Accept-Ranges': 'bytes',
+        'Content-Length': buffer.byteLength.toString(),
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  } catch (dbErr) {
+    return c.text('Audio retrieval error', 500);
+  }
 });
 
 // 3. GET /api/stage/live — Active MMO Main Stage Broadcast State
