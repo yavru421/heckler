@@ -123,4 +123,38 @@ namespace Heckler.Frontend.Models
         [JsonPropertyName("timestamp")]
         public string Timestamp { get; set; } = "";
     }
+
+    public class PlaylistModel
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "";
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = "";
+        [JsonPropertyName("author")]
+        public string Author { get; set; } = "";
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = "";
+        [JsonPropertyName("icon")]
+        public string Icon { get; set; } = "";
+    }
+
+    public class PlaylistTrackModel
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "";
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = "";
+        [JsonPropertyName("fullText")]
+        public string FullText { get; set; } = "";
+        [JsonPropertyName("performer")]
+        public string Performer { get; set; } = "";
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = "";
+        [JsonPropertyName("audioUrl")]
+        public string AudioUrl { get; set; } = "";
+        [JsonPropertyName("kills")]
+        public int Kills { get; set; }
+    }
 }

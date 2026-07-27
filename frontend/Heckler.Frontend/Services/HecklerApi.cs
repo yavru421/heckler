@@ -265,16 +265,51 @@ namespace Heckler.Frontend.Services
         }
 
         // --- MMO LIVE MAIN STAGE ---
-        public async Task<LiveStageState?> GetLiveStageAsync()
+        public async Task<LiveStageState?> GetLiveStageAsync(List<string>? excludeIds = null)
         {
             try
             {
-                return await _http.GetFromJsonAsync<LiveStageState>("api/stage/live");
+                var url = "api/stage/live";
+                if (excludeIds != null && excludeIds.Count > 0)
+                {
+                    var joined = string.Join(",", excludeIds);
+                    url += $"?excludeIds={Uri.EscapeDataString(joined)}";
+                }
+                return await _http.GetFromJsonAsync<LiveStageState>(url);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error fetching live stage: {ex.Message}");
                 return null;
+            }
+        }
+
+        // --- RADIO PLAYLISTS ---
+        public async Task<List<PlaylistModel>> GetPlaylistsAsync()
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<List<PlaylistModel>>("api/playlists");
+                return response ?? new List<PlaylistModel>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching playlists: {ex.Message}");
+                return new List<PlaylistModel>();
+            }
+        }
+
+        public async Task<List<PlaylistTrackModel>> GetPlaylistTracksAsync(string playlistId)
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<List<PlaylistTrackModel>>($"api/playlists/{playlistId}/tracks");
+                return response ?? new List<PlaylistTrackModel>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching playlist tracks: {ex.Message}");
+                return new List<PlaylistTrackModel>();
             }
         }
 

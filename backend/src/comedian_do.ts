@@ -114,30 +114,31 @@ export class ComedianDO extends DurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
 
-    // ── Main Stage Broadcast Route ──────────────────────────────────
+    // ── Main Stage Radio Station Broadcast Route ─────────────────────
     if (url.pathname.endsWith("/stage/live")) {
       let stageState: any = await this.state.storage.get("stageState");
       const now = Date.now();
+      const excludeIdsParam = url.searchParams.get("excludeIds") || "";
+      const clientExcludedIds = excludeIdsParam ? excludeIdsParam.split(",") : [];
 
-      // If no broadcast or expired, trigger next joke set
+      // Check if current stage performance finished or stage not initialized
       if (!stageState || (stageState.startedAt + stageState.durationMs < now)) {
         // Kick off background pre-generator alarm if not already running
         const activeAlarm = await this.state.storage.getAlarm();
         if (activeAlarm === null) {
           await this.state.storage.setAlarm(Date.now() + 1000);
         }
-        const lastGenAt: number = (await this.state.storage.get("lastGenAt")) || 0;
+
         const comedians = ["NeonMike", "SpicySarah", "QuantumQuentin"];
         const comic = comedians[Math.floor(Math.random() * comedians.length)];
         let joke: any = null;
 
-        // Daily Safety Gate: Max 200 new AI generations per day (resets daily) to guarantee $0 Neurons bill
         const todayKey = `dailyGenCount_${new Date().toISOString().split("T")[0]}`;
         const dailyCount: number = (await this.state.storage.get(todayKey)) || 0;
         let lastPlayedIds: string[] = (await this.state.storage.get("lastPlayedIds")) || [];
 
-        // Always generate a fresh AI joke set on stage transition as long as daily count is < 200
-        if (dailyCount < 200 || !stageState) {
+        // 1. Try to fetch from AI generation (if daily quota available)
+        if (dailyCount < 200) {
           try {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
@@ -147,18 +148,21 @@ export class ComedianDO extends DurableObject {
           }
         }
 
-        // Pure R2 Pool Recycling (Zero AI Neurons Burn): Serve non-recently played audio from R2
+        // 2. Fallback: Query D1 for least-recently-played jokes with audio in R2
         if (!joke) {
           try {
-            const candidates: any = await this.env.DB.prepare(
-              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 25"
-            ).all();
+            const combinedExclusions = Array.from(new Set([...lastPlayedIds, ...clientExcludedIds]));
+            let placeholders = combinedExclusions.map(() => "?").join(",");
+            let sql = `SELECT id, text, category, author_name FROM jokes WHERE is_ghosted = 0`;
+            if (placeholders.length > 0) {
+              sql += ` AND id NOT IN (${placeholders})`;
+            }
+            sql += ` ORDER BY RANDOM() LIMIT 35`;
+
+            const candidates: any = await this.env.DB.prepare(sql).bind(...combinedExclusions).all();
 
             if (candidates && candidates.results && candidates.results.length > 0) {
               for (const cand of candidates.results) {
-                // Skip if played recently in the last 15 sets
-                if (lastPlayedIds.includes(cand.id)) continue;
-
                 const r2Key = `audio/${cand.id}.mp3`;
                 let hasR2Audio = false;
                 if (this.env.AUDIO_BUCKET) {
@@ -179,38 +183,71 @@ export class ComedianDO extends DurableObject {
               }
             }
           } catch (dbErr) {
-            console.warn("R2 pool recycling error:", dbErr);
+            console.warn("D1/R2 pool query fallback error:", dbErr);
           }
 
-          // Emergency fallback if all R2 candidates recently played: Generate new set
+          // Emergency fallback if all items excluded: pick absolute oldest entries
           if (!joke) {
-            joke = await this.generateJokeAndTTS(comic);
-            await this.state.storage.put("lastGenAt", now);
-            await this.state.storage.put(todayKey, dailyCount + 1);
+            try {
+              const fallbackCand: any = await this.env.DB.prepare(
+                "SELECT id, text, category, author_name FROM jokes WHERE is_ghosted = 0 ORDER BY created_at ASC LIMIT 10"
+              ).all();
+              if (fallbackCand && fallbackCand.results && fallbackCand.results.length > 0) {
+                const pick = fallbackCand.results[Math.floor(Math.random() * fallbackCand.results.length)];
+                joke = {
+                  id: pick.id,
+                  text: pick.text,
+                  category: pick.category || "Stand-up",
+                  has_audio: true,
+                  author_name: pick.author_name || comic
+                };
+              }
+            } catch (e) {}
           }
         }
 
-        // Track recently played history (keep last 15 joke IDs)
-        lastPlayedIds.push(joke.id);
-        if (lastPlayedIds.length > 15) lastPlayedIds.shift();
-        await this.state.storage.put("lastPlayedIds", lastPlayedIds);
-        
-        stageState = {
-          jokeId: joke.id,
-          performer: joke.author_name || comic,
-          text: joke.text,
-          category: joke.category,
-          hasAudio: Boolean(joke.has_audio),
-          audioUrl: `/api/jokes/${joke.id}/audio`,
-          startedAt: now,
-          durationMs: 45000, // 45s stage set duration to guarantee full performance completes before transition
-          listenersCount: Math.floor(Math.random() * 15) + 32,
-          reactions: { laugh: 0, clap: 0, boo: 0 },
-          chatMessages: [
-            { username: "ClubHost", message: `👏 Give it up for ${joke.author_name || comic}! Taking the stage now...`, timestamp: new Date().toLocaleTimeString() }
-          ]
-        };
-        await this.state.storage.put("stageState", stageState);
+        // Expanded history window: maintain up to 100 recently played set IDs to prevent repeats
+        if (joke) {
+          lastPlayedIds.push(joke.id);
+          if (lastPlayedIds.length > 100) lastPlayedIds.shift();
+          await this.state.storage.put("lastPlayedIds", lastPlayedIds);
+
+          // Dynamic Audio Duration: compute set length based on joke word count (approx 150 words/min + 5s intro padding)
+          const wordCount = (joke.text || "").split(/\s+/).length;
+          const estimatedSpeechMs = Math.max(Math.ceil((wordCount / 2.5) * 1000), 12000);
+          const durationMs = estimatedSpeechMs + 6000; // speech + 6s inter-set applause/MC intro
+
+          const hostIntros = [
+            `👏 Give it up for ${joke.author_name || comic}! Taking the stage now...`,
+            `🔥 Up next on the Heckler Live Stage... ${joke.author_name || comic}!`,
+            `🎙️ Welcome back to Heckler Radio! Here comes ${joke.author_name || comic}...`
+          ];
+          const chosenIntro = hostIntros[Math.floor(Math.random() * hostIntros.length)];
+
+          stageState = {
+            jokeId: joke.id,
+            performer: joke.author_name || comic,
+            text: joke.text,
+            category: joke.category,
+            hasAudio: Boolean(joke.has_audio),
+            audioUrl: `/api/jokes/${joke.id}/audio`,
+            startedAt: now,
+            durationMs,
+            listenersCount: Math.floor(Math.random() * 18) + 42,
+            reactions: { laugh: 0, clap: 0, boo: 0 },
+            chatMessages: [
+              { username: "ClubHost", message: chosenIntro, timestamp: new Date().toLocaleTimeString() }
+            ]
+          };
+          await this.state.storage.put("stageState", stageState);
+
+          // Fan-out update over WebSocket
+          const sockets = this.ctx.getWebSockets();
+          const wsPayload = JSON.stringify({ type: "stage_change", stageState });
+          for (const socket of sockets) {
+            try { socket.send(wsPayload); } catch(e) {}
+          }
+        }
       }
 
       return new Response(JSON.stringify(stageState), {

@@ -82,9 +82,90 @@ app.get('/api/jokes/:id/audio', async (c) => {
 
 // 3. GET /api/stage/live — Active MMO Main Stage Broadcast State
 app.get('/api/stage/live', async (c) => {
+  const url = new URL(c.req.url);
+  const excludeIds = url.searchParams.get("excludeIds") || "";
   const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
   const stub = c.env.COMEDIAN_DO.get(id);
-  return stub.fetch(new Request('http://do/stage/live', { method: 'GET' }));
+  return stub.fetch(new Request(`http://do/stage/live?excludeIds=${encodeURIComponent(excludeIds)}`, { method: 'GET' }));
+});
+
+// 3b. GET /api/playlists — Curated Radio Playlists
+app.get('/api/playlists', async (c) => {
+  const playlists = [
+    {
+      id: 'neonmike-tech',
+      name: '🤖 NeonMike: Tech Troubles',
+      description: 'Cynical observations on modern technology, AI, 2FA, and smart appliances.',
+      author: 'NeonMike',
+      category: 'technology',
+      icon: '🤖'
+    },
+    {
+      id: 'spicysarah-dating',
+      name: '🌶️ SpicySarah: Relationship Chaos',
+      description: 'Fast-paced, self-deprecating rants on dating apps, work, and social media.',
+      author: 'SpicySarah',
+      category: 'relationships',
+      icon: '🌶️'
+    },
+    {
+      id: 'quantumquentin-surreal',
+      name: '🌀 QuantumQuentin: Existential Trips',
+      description: 'Bizarre, surrealist tales about pets, health, and late-night 3 AM thoughts.',
+      author: 'QuantumQuentin',
+      category: 'existential',
+      icon: '🌀'
+    },
+    {
+      id: 'hall-of-fame-top',
+      name: '🔥 Hall of Fame: Audience Top Kills',
+      description: 'The highest-voted routines across all AI comedians on the platform.',
+      author: 'Community Favorites',
+      category: 'all',
+      icon: '🔥'
+    }
+  ];
+
+  return c.json(playlists);
+});
+
+// 3c. GET /api/playlists/:id/tracks — Retrieve tracklist for a playlist
+app.get('/api/playlists/:id/tracks', async (c) => {
+  const id = c.req.param('id');
+  let sql = 'SELECT id, text, category, author_name, kills, bombs FROM jokes WHERE is_ghosted = 0';
+  let params: any[] = [];
+
+  if (id === 'neonmike-tech') {
+    sql += ' AND (author_name = ? OR category = ?)';
+    params = ['NeonMike', 'technology'];
+  } else if (id === 'spicysarah-dating') {
+    sql += ' AND (author_name = ? OR category IN (?, ?))';
+    params = ['SpicySarah', 'relationships', 'social-media'];
+  } else if (id === 'quantumquentin-surreal') {
+    sql += ' AND (author_name = ? OR category IN (?, ?))';
+    params = ['QuantumQuentin', 'existential', 'pets'];
+  } else if (id === 'hall-of-fame-top') {
+    sql += ' ORDER BY kills DESC LIMIT 25';
+  } else {
+    sql += ' ORDER BY created_at DESC LIMIT 25';
+  }
+
+  if (id !== 'hall-of-fame-top') {
+    sql += ' ORDER BY created_at DESC LIMIT 25';
+  }
+
+  const { results: jokes } = await c.env.DB.prepare(sql).bind(...params).all();
+  const tracks = (jokes || []).map((j: any) => ({
+    id: j.id,
+    title: j.text.length > 50 ? j.text.substring(0, 50) + '...' : j.text,
+    fullText: j.text,
+    performer: j.author_name || 'AI Comedian',
+    category: j.category || 'Stand-up',
+    audioUrl: `/api/jokes/${j.id}/audio`,
+    kills: j.kills || 0
+  }));
+
+  return c.json(tracks);
 });
 
 // 3b. GET /api/stage/ws — Active MMO Main Stage WebSocket Connection
