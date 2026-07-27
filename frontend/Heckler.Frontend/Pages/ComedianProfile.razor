@@ -112,15 +112,16 @@
     {
         var baseAddr = (Api.GetType().GetField("_http", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Api) is HttpClient client) ? client.BaseAddress?.ToString() : "";
         var audioUrl = $"{baseAddr}api/jokes/{joke.Id}/audio";
-        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl);
-        if (!played)
+        bool isFemale = (joke.AuthorName ?? "").Contains("Sarah", StringComparison.OrdinalIgnoreCase);
+        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", audioUrl, joke.Text ?? "", isFemale, joke.AuthorName ?? "");
+        if (!played && !string.IsNullOrEmpty(joke.Text))
         {
-            await SpeakJokeTts(joke.Text);
+            await SpeakJokeTts(joke.Text, isFemale, joke.AuthorName ?? "");
         }
     }
 
-    private async Task SpeakJokeTts(string text)
+    private async Task SpeakJokeTts(string text, bool isFemale = false, string performer = "")
     {
-        await JS.InvokeVoidAsync("audioInterop.speakText", text, 1.0f);
+        await JS.InvokeVoidAsync("audioInterop.speakText", text, isFemale, performer);
     }
 }

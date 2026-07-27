@@ -415,19 +415,16 @@
 
     private async Task PlayCurrentBroadcastAudio()
     {
-        if (stageState == null || string.IsNullOrEmpty(stageState.AudioUrl)) return;
+        if (stageState == null) return;
         await JS.InvokeVoidAsync("audioInterop.unlockAudio");
         
-        string fullAudioUrl = stageState.AudioUrl.StartsWith("http") 
-            ? stageState.AudioUrl 
-            : Nav.BaseUri.TrimEnd('/') + "/" + stageState.AudioUrl.TrimStart('/');
+        string fullAudioUrl = Api.GetApiUrl(stageState.AudioUrl);
 
-        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", fullAudioUrl);
-        if (!played)
+        bool isFemale = (stageState.Performer ?? "").Contains("Sarah", StringComparison.OrdinalIgnoreCase);
+        var played = await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", fullAudioUrl, stageState.Text ?? "", isFemale, stageState.Performer ?? "");
+        if (!played && !string.IsNullOrEmpty(stageState.Text))
         {
-            // Retry fetch after 500ms brief buffer sync if initial fetch fails
-            await Task.Delay(500);
-            await JS.InvokeAsync<bool>("audioInterop.playAudioUrl", fullAudioUrl);
+            await JS.InvokeAsync<bool>("audioInterop.speakText", stageState.Text, isFemale, stageState.Performer ?? "");
         }
     }
 

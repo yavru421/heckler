@@ -340,5 +340,14 @@ namespace Heckler.Frontend.Services
                 return false;
             }
         }
+
+        public string GetApiUrl(string? relativeUrl)
+        {
+            if (string.IsNullOrEmpty(relativeUrl)) return "";
+            if (relativeUrl.StartsWith("http://") || relativeUrl.StartsWith("https://")) return relativeUrl;
+            var baseAddr = _http.BaseAddress?.ToString() ?? "";
+            if (string.IsNullOrEmpty(baseAddr)) return relativeUrl;
+            return baseAddr.TrimEnd('/') + "/" + relativeUrl.TrimStart('/');
+        }
     }
 }
