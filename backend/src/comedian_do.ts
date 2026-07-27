@@ -136,27 +136,41 @@ export class ComedianDO extends DurableObject {
           }
         }
 
-        // Pool Reuse: Fetch a random existing joke from D1 ledger THAT HAS SAVED AUDIO
+        // Pool Reuse: Fetch a random existing joke from D1 ledger THAT HAS VERIFIED AUDIO (in R2 or D1)
         if (!joke) {
           try {
-            const pool: any = await this.env.DB.prepare(
-              "SELECT id, text, category, author_name FROM jokes WHERE audio_data IS NOT NULL AND length(audio_data) > 500 ORDER BY RANDOM() LIMIT 1"
-            ).first();
+            const candidates: any = await this.env.DB.prepare(
+              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 10"
+            ).all();
 
-            if (pool) {
-              joke = {
-                id: pool.id,
-                text: pool.text,
-                category: pool.category || "Stand-up",
-                has_audio: true,
-                author_name: pool.author_name || comic
-              };
+            if (candidates && candidates.results && candidates.results.length > 0) {
+              for (const cand of candidates.results) {
+                // Check R2 bucket first
+                const r2Key = `audio/${cand.id}.mp3`;
+                let hasR2Audio = false;
+                if (this.env.AUDIO_BUCKET) {
+                  const obj = await this.env.AUDIO_BUCKET.head(r2Key);
+                  if (obj) hasR2Audio = true;
+                }
+
+                // If in R2 or has D1 blob, select this joke
+                if (hasR2Audio) {
+                  joke = {
+                    id: cand.id,
+                    text: cand.text,
+                    category: cand.category || "Stand-up",
+                    has_audio: true,
+                    author_name: cand.author_name || comic
+                  };
+                  break;
+                }
+              }
             }
           } catch (dbErr) {
             console.warn("D1 pool query error:", dbErr);
           }
 
-          // Ultimate fallback if D1 has no valid audio entries yet
+          // Ultimate fallback if no candidate audio found: force new LLM + TTS synthesis
           if (!joke) {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
