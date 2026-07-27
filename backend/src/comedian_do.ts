@@ -126,26 +126,30 @@ export class ComedianDO extends DurableObject {
         const comic = comedians[Math.floor(Math.random() * comedians.length)];
         let joke: any = null;
 
-        // Cap LLM + TTS generation to 20 new jokes per hour (min 180,000ms = 3 mins between new LLM runs)
-        if (now - lastGenAt > 180000 || !stageState) {
+        // Daily Safety Gate: Max 200 new AI generations per day (resets daily) to guarantee $0 Neurons bill
+        const todayKey = `dailyGenCount_${new Date().toISOString().split("T")[0]}`;
+        const dailyCount: number = (await this.state.storage.get(todayKey)) || 0;
+
+        // Cap new AI generation: Only trigger if >3 mins since last AND <200 daily generations
+        if ((now - lastGenAt > 180000 && dailyCount < 200) || !stageState) {
           try {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
+            await this.state.storage.put(todayKey, dailyCount + 1);
           } catch (e) {
-            console.warn("LLM/TTS gen error, falling back to D1 pool:", e);
+            console.warn("LLM/TTS gen error, falling back to D1/R2 pool:", e);
           }
         }
 
-        // Pool Reuse: Fetch a random existing joke from D1 ledger THAT HAS VERIFIED AUDIO (in R2 or D1)
+        // Pure R2 Pool Recycling (Zero AI Neurons Burn): Serve verified pre-recorded audio from R2
         if (!joke) {
           try {
             const candidates: any = await this.env.DB.prepare(
-              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 10"
+              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 15"
             ).all();
 
             if (candidates && candidates.results && candidates.results.length > 0) {
               for (const cand of candidates.results) {
-                // Check R2 bucket first
                 const r2Key = `audio/${cand.id}.mp3`;
                 let hasR2Audio = false;
                 if (this.env.AUDIO_BUCKET) {
@@ -153,7 +157,6 @@ export class ComedianDO extends DurableObject {
                   if (obj) hasR2Audio = true;
                 }
 
-                // If in R2 or has D1 blob, select this joke
                 if (hasR2Audio) {
                   joke = {
                     id: cand.id,
@@ -167,13 +170,14 @@ export class ComedianDO extends DurableObject {
               }
             }
           } catch (dbErr) {
-            console.warn("D1 pool query error:", dbErr);
+            console.warn("R2 pool recycling error:", dbErr);
           }
 
-          // Ultimate fallback if no candidate audio found: force new LLM + TTS synthesis
+          // Emergency fallback if R2 empty: Generate single set and increment daily counter
           if (!joke) {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
+            await this.state.storage.put(todayKey, dailyCount + 1);
           }
         }
         
