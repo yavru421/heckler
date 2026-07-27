@@ -90,14 +90,14 @@ window.audioInterop = {
     },
 
     // Stream /api/tts directly over HTML5 Audio with Web Speech API fallback
-    speakText: async function (text, isFemale = false) {
+    speakText: async function (text, isFemale = false, performer = "") {
         window.audioInterop.stopAllAudio();
         return new Promise(async (resolve) => {
             try {
                 const response = await fetch('/api/tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
+                    body: JSON.stringify({ text: text, performer: performer || (isFemale ? "SpicySarah" : "NeonMike") })
                 });
 
                 if (response.ok) {

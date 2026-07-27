@@ -473,9 +473,13 @@ I installed a smart doorbell that recognizes faces. [PAUSE:1.0] Last night it se
   }
 
   private pickSpeaker(username: string): string {
-    if (COMEDIAN_PROFILES[username]) {
-      return COMEDIAN_PROFILES[username].speaker;
+    const key = Object.keys(COMEDIAN_PROFILES).find(
+      (k) => k.toLowerCase() === username.toLowerCase()
+    );
+    if (key && COMEDIAN_PROFILES[key]) {
+      return COMEDIAN_PROFILES[key].speaker;
     }
+    if (username.toLowerCase().includes("sarah")) return "asteria";
     return VALID_SPEAKERS[Math.abs(this.hashCode(username)) % VALID_SPEAKERS.length];
   }
 

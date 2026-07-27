@@ -127,7 +127,8 @@ app.post('/api/tts', async (c) => {
   try {
     const body = await c.req.json();
     const text = body.text;
-    const speaker = body.speaker || 'orion';
+    const performer = body.performer || body.speaker || 'orion';
+    let speaker = performer.toLowerCase().includes('sarah') ? 'asteria' : performer;
     if (!text) return c.text('Text is required', 400);
 
     const cleanText = text.replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ").replace(/[#*$_[\](){}]/g, "").replace(/\s+/g, " ").trim();
