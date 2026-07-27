@@ -116,8 +116,15 @@
 
         <!-- Live Audience Chat & Heckle Feed (Right Sidebar) -->
         <aside class="chat-sidebar glass-panel">
-            <div class="chat-header">
-                💬 LIVE AUDIENCE CHAT & HECKLES
+            <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>💬 STAGE HECKLES</span>
+                <span style="font-size: 0.75rem; color: var(--neon-blue);">@@@myUsername</span>
+            </div>
+
+            <!-- Nametag input bar -->
+            <div class="nametag-bar" style="display: flex; gap: 0.4rem; margin-bottom: 0.6rem; background: rgba(0,0,0,0.3); padding: 0.4rem; border-radius: 6px; border: 1px solid var(--surface-border);">
+                <span style="font-size: 0.8rem; color: var(--text-secondary); align-self: center;">🏷️ Name:</span>
+                <input type="text" @bind="myUsername" placeholder="Enter your nametag..." style="flex: 1; padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid var(--surface-border); background: black; color: #00f0ff; font-size: 0.8rem; font-weight: bold;" />
             </div>
 
             <div class="chat-messages-container">
