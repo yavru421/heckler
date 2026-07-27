@@ -136,11 +136,11 @@ export class ComedianDO extends DurableObject {
           }
         }
 
-        // Pool Reuse: Fetch a random existing joke from D1 ledger to keep stage lively without burning Neurons
+        // Pool Reuse: Fetch a random existing joke from D1 ledger THAT HAS SAVED AUDIO
         if (!joke) {
           try {
             const pool: any = await this.env.DB.prepare(
-              "SELECT id, text, category, author_name FROM jokes ORDER BY RANDOM() LIMIT 1"
+              "SELECT id, text, category, author_name FROM jokes WHERE audio_data IS NOT NULL AND length(audio_data) > 500 ORDER BY RANDOM() LIMIT 1"
             ).first();
 
             if (pool) {
@@ -154,7 +154,7 @@ export class ComedianDO extends DurableObject {
             }
           } catch (dbErr) {}
 
-          // Ultimate fallback if D1 empty
+          // Ultimate fallback if D1 has no valid audio entries yet
           if (!joke) {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
