@@ -24,4 +24,4 @@ rm -rf frontend/Heckler.Frontend/obj || true
 cd backend && npm ci && cd ..
 
 # Publish the application using the local SDK installation without runtime relinking (emcc/wasm-tools)
-./dotnet/dotnet publish frontend/Heckler.Frontend/Heckler.Frontend.csproj -c Release -o output -p:UsingBrowserRuntimeWorkload=false
+./dotnet/dotnet publish frontend/Heckler.Frontend/Heckler.Frontend.csproj -c Release -o output -p:UsingBrowserRuntimeWorkload=false -p:PublishTrimmed=false
