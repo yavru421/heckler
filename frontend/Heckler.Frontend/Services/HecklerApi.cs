@@ -6,6 +6,7 @@ namespace Heckler.Frontend.Services
     public class HecklerApi
     {
         private readonly HttpClient _http;
+        private readonly string _clientId = Guid.NewGuid().ToString("N");
 
         public HecklerApi(HttpClient http)
         {
@@ -269,11 +270,12 @@ namespace Heckler.Frontend.Services
         {
             try
             {
-                var url = "api/stage/live";
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var url = $"api/stage/live?clientId={_clientId}&_t={ts}";
                 if (excludeIds != null && excludeIds.Count > 0)
                 {
                     var joined = string.Join(",", excludeIds);
-                    url += $"?excludeIds={Uri.EscapeDataString(joined)}";
+                    url += $"&excludeIds={Uri.EscapeDataString(joined)}";
                 }
                 return await _http.GetFromJsonAsync<LiveStageState>(url);
             }

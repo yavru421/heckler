@@ -106,9 +106,11 @@ app.get('/api/jokes/:id/audio', async (c) => {
 app.get('/api/stage/live', async (c) => {
   const url = new URL(c.req.url);
   const excludeIds = url.searchParams.get("excludeIds") || "";
+  const clientId = url.searchParams.get("clientId") || "";
   const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
   const stub = c.env.COMEDIAN_DO.get(id);
-  return stub.fetch(new Request(`http://do/stage/live?excludeIds=${encodeURIComponent(excludeIds)}`, { method: 'GET' }));
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  return stub.fetch(new Request(`http://do/stage/live?excludeIds=${encodeURIComponent(excludeIds)}&clientId=${encodeURIComponent(clientId)}`, { method: 'GET' }));
 });
 
 // 3b. GET /api/playlists — Curated Radio Playlists

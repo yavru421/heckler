@@ -96,6 +96,7 @@ const CATEGORIES = [
 export class ComedianDO extends DurableObject {
   state: DurableObjectState;
   env: Env;
+  activeListeners: Map<string, number> = new Map();
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
@@ -120,6 +121,16 @@ export class ComedianDO extends DurableObject {
       const now = Date.now();
       const excludeIdsParam = url.searchParams.get("excludeIds") || "";
       const clientExcludedIds = excludeIdsParam ? excludeIdsParam.split(",") : [];
+      const clientIdParam = url.searchParams.get("clientId") || "";
+
+      if (clientIdParam) {
+        this.activeListeners.set(clientIdParam, now);
+      }
+      for (const [cid, lastTime] of this.activeListeners.entries()) {
+        if (now - lastTime > 10000) {
+          this.activeListeners.delete(cid);
+        }
+      }
 
       // Check if current stage performance finished or stage not initialized
       if (!stageState || (stageState.startedAt + stageState.durationMs < now)) {
@@ -247,7 +258,7 @@ export class ComedianDO extends DurableObject {
             audioUrl: `/api/jokes/${joke.id}/audio`,
             startedAt: now,
             durationMs,
-            listenersCount: Math.max(1, this.ctx.getWebSockets().length),
+            listenersCount: Math.max(1, this.activeListeners.size, this.ctx.getWebSockets().length),
             reactions: { laugh: 0, clap: 0, boo: 0 },
             chatMessages: stageState?.chatMessages || []
           };
@@ -263,7 +274,7 @@ export class ComedianDO extends DurableObject {
       }
 
       if (stageState) {
-        stageState.listenersCount = Math.max(1, this.ctx.getWebSockets().length);
+        stageState.listenersCount = Math.max(1, this.activeListeners.size, this.ctx.getWebSockets().length);
       }
 
       return new Response(JSON.stringify(stageState), {
