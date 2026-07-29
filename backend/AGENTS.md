@@ -59,3 +59,49 @@ This is non-negotiable and must be handled with utmost priority to prevent casca
 **NTFS Single-Source-of-Truth Hard-Link Invariant:**
 Whenever initializing, updating, or maintaining system-wide configuration files (`AGENTS.md`, `.agentsignore`, `db_session.py`), the agent MUST enforce single-source-of-truth storage at `C:\Users\John\.gemini\config\` and maintain NTFS hard links (`os.link`) to all workspace target directories. Never create isolated copy duplicates of system configuration files.
 </RULE[AGENTS.md]>
+
+<RULE[AGENTS.md]>
+**Pure Engineering & Curiosity-Driven R&D Invariant:**
+When brainstorming, exploring system architectures, or proposing R&D vectors, NEVER frame ideas around monetary metrics ($$ savings, ROI, enterprise cost reduction, or commercial SaaS replacement) unless explicitly requested by the user. 
+Focus EXCLUSIVELY on raw technical curiosity, computational elegance, hardware acceleration, novel system paradigms, and tangible daily friction elimination.
+</RULE[AGENTS.md]>
+
+<RULE[AGENTS.md]>
+**Semantic Trajectory & Operator Identity Invariant:**
+Whenever summarizing or visualizing historical telemetry, user growth, or session history (e.g. `/remember_recent`, `/telemetry`, `/mind`), NEVER default to generic process metadata (such as step volume, diurnal activity, or window focus). 
+Telemetry MUST always perform semantic/linguistic extraction to visualize:
+1. Toolchain & IDE Transitions (e.g., VSCode -> Cursor).
+2. AI Model & Engine Supremacy (e.g., Antigravity vs OpenAI/Claude).
+3. Core Architectural Entrenchment (e.g., Cloudflare Edge, ZLA, DuckDB, PowerShell).
+4. Philosophical & Technical Milestones (e.g., Codex manifestos and breakthroughs).
+</RULE[AGENTS.md]>
+
+<RULE[AGENTS.md]>
+**Concrete Deliverables & Project Telemetry Invariant:**
+Whenever summarizing or visualizing telemetry via `/remember_recent` or `/telemetry`, NEVER output abstract keyword-frequency line charts or word counts.
+Telemetry MUST ALWAYS query disk modification timestamps (c:\dev\) and active DuckDB solution records to display:
+1. Real Project Modification Timestamps (Exact date, time, and target files).
+2. Live Edge & Cloudflare Infrastructure (Pages, Workers, D1 DBs, Durable Objects).
+3. Concrete Code Features & Solves Completed.
+</RULE[AGENTS.md]>
+
+
+
+<RULE[AGENTS.md]>
+**Operator Identity & Product Vision Invariant:**
+John Dondlinger is an advanced Edge Architect building globally scalable consumer SaaS, AI platforms, and MMOs (e.g., InspectaLlama, Heckler) using Zero-Liability Architecture (ZLA), Cloudflare Workers, Durable Objects, D1, and Blazor WASM.
+
+1. NEVER treat his projects as generic local web-dev agency builds or B2B brochure sites for small businesses.
+2. When explicitly asked about monetization, pricing, or career trajectory, focus EXCLUSIVELY on high-leverage outcomes: 
+   - Solo Founder SaaS models (Stripe subscriptions, premium consumer micro-transactions).
+   - Top-tier remote Edge Architect/Senior Engineer roles.
+3. NEVER propose pitching his advanced edge software as standard agency retainers to local brick-and-mortar businesses unless he explicitly requests a B2B agency workflow.
+</RULE[AGENTS.md]>
+
+
+<RULE[AGENTS.md]>
+**OrchestratorDO / `>>` Shorthand Dispatch (MCP Migration):**
+When the user types `>> [prompt]` or requests to evaluate something on the Edge, the agent MUST use the `call_mcp_tool` with ServerName: `orchestrator-do-mcp-server` and ToolName: `orchestrator_chat`. 
+Do NOT use the legacy `orchestrator-do-dispatcher` subagent or raw PowerShell scripts. The native MCP server automatically handles DPAPI auth and anti-fluff guardrails with zero UI friction.
+</RULE[AGENTS.md]>
+

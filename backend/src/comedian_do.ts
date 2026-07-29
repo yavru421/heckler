@@ -136,6 +136,7 @@ export class ComedianDO extends DurableObject {
         const todayKey = `dailyGenCount_${new Date().toISOString().split("T")[0]}`;
         const dailyCount: number = (await this.state.storage.get(todayKey)) || 0;
         let lastPlayedIds: string[] = (await this.state.storage.get("lastPlayedIds")) || [];
+        let lastPlayedTexts: string[] = (await this.state.storage.get("lastPlayedTexts")) || [];
 
         // 1. Try to fetch from AI generation (if daily quota available)
         if (dailyCount < 200) {
@@ -148,21 +149,26 @@ export class ComedianDO extends DurableObject {
           }
         }
 
-        // 2. Fallback: Query D1 for least-recently-played jokes with audio in R2
+        // 2. Fallback: Query D1 for least-recently-played jokes with audio in R2 (grouped by text to eliminate duplicate text entries)
         if (!joke) {
           try {
             const combinedExclusions = Array.from(new Set([...lastPlayedIds, ...clientExcludedIds]));
             let placeholders = combinedExclusions.map(() => "?").join(",");
-            let sql = `SELECT id, text, category, author_name FROM jokes WHERE is_ghosted = 0`;
+            let sql = `SELECT MIN(id) as id, text, category, author_name FROM jokes WHERE is_ghosted = 0`;
             if (placeholders.length > 0) {
               sql += ` AND id NOT IN (${placeholders})`;
             }
-            sql += ` ORDER BY RANDOM() LIMIT 35`;
+            sql += ` GROUP BY LOWER(TRIM(text)) ORDER BY RANDOM() LIMIT 50`;
 
             const candidates: any = await this.env.DB.prepare(sql).bind(...combinedExclusions).all();
 
             if (candidates && candidates.results && candidates.results.length > 0) {
               for (const cand of candidates.results) {
+                const normText = (cand.text || "").toLowerCase().trim();
+                if (lastPlayedTexts.includes(normText)) {
+                  continue; // Skip if text was played recently regardless of ID
+                }
+
                 const r2Key = `audio/${cand.id}.mp3`;
                 let hasR2Audio = false;
                 if (this.env.AUDIO_BUCKET) {
@@ -186,14 +192,15 @@ export class ComedianDO extends DurableObject {
             console.warn("D1/R2 pool query fallback error:", dbErr);
           }
 
-          // Emergency fallback if all items excluded: pick absolute oldest entries
+          // Emergency fallback if all items excluded: pick entry not in lastPlayedTexts
           if (!joke) {
             try {
               const fallbackCand: any = await this.env.DB.prepare(
-                "SELECT id, text, category, author_name FROM jokes WHERE is_ghosted = 0 ORDER BY created_at ASC LIMIT 10"
+                "SELECT MIN(id) as id, text, category, author_name FROM jokes WHERE is_ghosted = 0 GROUP BY LOWER(TRIM(text)) ORDER BY RANDOM() LIMIT 20"
               ).all();
               if (fallbackCand && fallbackCand.results && fallbackCand.results.length > 0) {
-                const pick = fallbackCand.results[Math.floor(Math.random() * fallbackCand.results.length)];
+                const unplayed = fallbackCand.results.filter((c: any) => !lastPlayedTexts.includes((c.text || "").toLowerCase().trim()));
+                const pick = unplayed.length > 0 ? unplayed[Math.floor(Math.random() * unplayed.length)] : fallbackCand.results[Math.floor(Math.random() * fallbackCand.results.length)];
                 joke = {
                   id: pick.id,
                   text: pick.text,
@@ -206,11 +213,18 @@ export class ComedianDO extends DurableObject {
           }
         }
 
-        // Expanded history window: maintain up to 100 recently played set IDs to prevent repeats
+        // Expanded history window: maintain up to 200 recently played set IDs and texts to prevent repeats
         if (joke) {
           lastPlayedIds.push(joke.id);
-          if (lastPlayedIds.length > 100) lastPlayedIds.shift();
+          if (lastPlayedIds.length > 200) lastPlayedIds.shift();
           await this.state.storage.put("lastPlayedIds", lastPlayedIds);
+
+          const normText = (joke.text || "").toLowerCase().trim();
+          if (normText) {
+            lastPlayedTexts.push(normText);
+            if (lastPlayedTexts.length > 200) lastPlayedTexts.shift();
+            await this.state.storage.put("lastPlayedTexts", lastPlayedTexts);
+          }
 
           // Dynamic Audio Duration: compute set length based on joke word count (approx 150 words/min + 5s intro padding)
           const wordCount = (joke.text || "").split(/\s+/).length;
@@ -456,8 +470,15 @@ Specific Premise: ${specificPremise}
       rawJokeText = aiResponse.response || aiResponse.result || aiResponse.content || "";
     }
 
-    const jokeText = rawJokeText.trim() ||
-      "My smart fridge sent me a weekly screen time report. [PAUSE:1.5] Apparently, I spent 12 hours looking at cheese.";
+    const fallbackJokes = [
+      "My smart fridge sent me a weekly screen time report. [PAUSE:1.5] Apparently, I spent 12 hours looking at cheese.",
+      "I tried using facial recognition to log into my bank. [PAUSE:1.2] It told me 'Account locked due to severe morning face.'",
+      "My doctor told me I need to lower my stress levels. [PAUSE:1.5] So I uninstalled my work email and threw my router in the ocean.",
+      "I asked AI to write my wedding vows. [PAUSE:1.5] It suggested 'As an AI language model, I promise to hallucinate a future together.'",
+      "Parallel parking in front of a outdoor patio crowd is the ultimate test of human dignity. [PAUSE:1.5] I failed so hard the waiter brought me a pity dessert.",
+      "My smartwatch told me to stand up for 1 minute every hour. [PAUSE:1.2] So I stood up, walked to the pantry, and ate three cookies."
+    ];
+    const jokeText = rawJokeText.trim() || fallbackJokes[Math.floor(Math.random() * fallbackJokes.length)];
     const jokeId = crypto.randomUUID();
 
     // ── 2. Parse joke into segments ──────────────────────────────
@@ -553,7 +574,7 @@ Specific Premise: ${specificPremise}
       .bind(
         jokeId,
         jokeText,
-        category,
+        baseCategory,
         username,
         audioBuffer,
         JSON.stringify(segmentMeta)
@@ -563,7 +584,7 @@ Specific Premise: ${specificPremise}
     return {
       id: jokeId,
       text: jokeText,
-      category,
+      category: baseCategory,
       archetype: archetypeKey,
       has_audio: audioBuffer ? true : false,
       segments: segmentMeta,

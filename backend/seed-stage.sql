@@ -48,9 +48,7 @@ The bartender asks it: "What''s wrong buddy?"
 "Parity error." it replies. 
 "Ah that makes sense, I thought you looked a bit off."', 'observational', 'DrinkMinimum', 13, 2, 0, '2026-06-30 15:06:04');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('a7782e15-a357-4ab9-a4fc-8dc79090103d', 'I hate double standards. Burn a body at a crematorium, you''re "being a respectful friend." Do it at home and you''re "destroying evidence."', 'dark', 'TwoForOne', 34, 2, 0, '2026-06-29 04:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('a750043a-6c45-4b46-82c9-cb9d9a0e853a', 'Algorithm: A word used by programmers when they don''t want to explain how their code works.', 'observational', 'HeckleQueen', 31, 13, 0, '2026-06-27 14:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('6e84d599-1353-48b9-bcc5-569b90538a9a', 'If Bill Gates had a dime for every time Windows crashed ... Oh wait, he does.', 'observational', 'BackRowBomber', 33, 1, 0, '2026-06-30 17:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('39b6736d-362b-4f61-9959-6fc9dbfbb680', 'The generation of random numbers is too important to be left to chance.', 'observational', 'HeckleQueen', 26, 10, 0, '2026-07-02 09:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('8333685f-96c3-4483-84a8-4cd20bb758c1', 'Two reasons I don''t give money to homeless people.
 1) They are going to spend it all on drugs and alcohol
 2) I am going to spend it all on drugs and alcohol.', 'one-liner', 'LaughTrack', 17, 12, 0, '2026-06-30 10:06:05');
@@ -60,7 +58,6 @@ INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, cr
 Me (thinking): "Please be death, please be death..."
 Judge: "Learn Java!"
 Me: "Damn."', 'observational', 'HeckleQueen', 29, 15, 0, '2026-07-03 07:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('9be5e475-feee-4241-9d69-2a939c6e101f', 'Programming is 10% science, 20% ingenuity, and 70% getting the ingenuity to work with the science.', 'observational', 'LaughTrack', 39, 11, 0, '2026-06-29 01:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('207f60e3-1183-40c8-8ee4-10c818971c39', 'I bought some shoes from a drug dealer. I don''t know what he laced them with, but I was tripping all day!', 'one-liner', 'ToughCrowd', 32, 5, 0, '2026-06-29 00:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('72cfd173-a252-42e9-8111-86d0234c8cbb', 'My husband and I were happy for 20 years. And then we met.', 'one-liner', 'ToughCrowd', 31, 3, 0, '2026-07-02 01:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('c278a7ef-00de-4cbf-860f-9c86a1d0fd6b', 'A horse walks into a bar.
@@ -73,12 +70,8 @@ INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, cr
 4. Why does that happen?
 5. Oh, I see.
 6. How did that ever work?', 'observational', 'ToughCrowd', 14, 0, 0, '2026-06-26 01:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('642801b8-a1b4-422c-9891-68896c302e21', 'My parents raised me as an only child, which really annoyed my younger brother.', 'one-liner', 'ComedyCorpse', 6, 9, 0, '2026-07-03 01:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('ca5d25c9-b598-468e-b0b4-1e8e51de57c4', 'I''ve got a really good UDP joke to tell you but I don’t know if you''ll get it.', 'observational', 'BombingBob', 20, 10, 0, '2026-07-03 07:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('67bc1490-eeff-42ec-ab4e-9b5e6213282c', 'Being a self-taught developer is almost the same as being a cut neck chicken because you have no sense of direction in the beginning.', 'observational', 'EdgyEddie', 12, 5, 0, '2026-07-03 01:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('9e01e6f1-1a0c-4a95-8eaf-29d6bb82ce63', 'Java is like Alzheimer''s, it starts off slow, but eventually, your memory is gone.', 'observational', 'HeckleQueen', 38, 0, 0, '2026-07-02 11:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('fc27cf17-0f0a-4b20-a5d2-a3b70de6e873', 'Yo mama is so old, she knew Burger King while he was still a prince.', 'one-liner', 'BarTab', 20, 11, 0, '2026-06-26 18:06:05');
-INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('2a128ad9-c46b-4279-84d0-5a3ad8f0dedc', 'I went to the zoo the other day. There was only a dog in it - it was a shihtzu.', 'one-liner', 'SpotlightSteve', 8, 13, 0, '2026-06-29 09:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('1e3f12f7-2e38-468d-af6d-e94da725e986', 'Have a great weekend!
 I hope your code behaves the same on Monday as it did on Friday.', 'observational', 'EdgyEddie', 27, 12, 0, '2026-06-30 03:06:05');
 INSERT INTO jokes (id, text, category, author_name, kills, bombs, is_ghosted, created_at) VALUES ('997aa10d-1953-477c-9fb1-b6f802dd17fe', 'I''m tired of following my dreams. I''m just going to ask them where they are going and meet up with them later.', 'cringe', 'LaughTrack', 11, 7, 0, '2026-06-29 03:06:05');
