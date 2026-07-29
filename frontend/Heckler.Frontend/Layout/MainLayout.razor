@@ -7,6 +7,11 @@
                 <h1 class="neon-text fade-in-text">HECKLER</h1>
                 <div class="logo-subtitle">LIVE ONLINE COMEDY CLUB</div>
             </div>
+            <div class="do-power-badge" title="Powered by Cloudflare Durable Objects Edge Architecture">
+                <span class="do-bolt">⚡</span>
+                <span class="do-label">POWERED BY <strong class="do-highlight">DURABLE OBJECTS</strong></span>
+                <span class="do-glow-dot"></span>
+            </div>
             <nav class="nav-links">
                 <a href="/">MMO Stage</a>
                 <a href="/rooms">VIP Tables</a>
@@ -78,7 +83,68 @@
     .header-left {
         display: flex;
         align-items: center;
-        gap: 2rem;
+        gap: 1.5rem;
+    }
+
+    .do-power-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: linear-gradient(135deg, rgba(243, 128, 32, 0.12), rgba(157, 78, 221, 0.15));
+        border: 1px solid rgba(243, 128, 32, 0.4);
+        box-shadow: 0 0 15px rgba(243, 128, 32, 0.2), inset 0 0 10px rgba(157, 78, 221, 0.15);
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .do-power-badge:hover {
+        border-color: #f38020;
+        box-shadow: 0 0 25px rgba(243, 128, 32, 0.5), 0 0 10px rgba(0, 240, 255, 0.4);
+        transform: translateY(-1px);
+    }
+
+    .do-bolt {
+        color: #f38020;
+        font-size: 0.9rem;
+        animation: boltPulse 1.5s infinite alternate ease-in-out;
+        filter: drop-shadow(0 0 6px #f38020);
+    }
+
+    .do-label {
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 500;
+    }
+
+    .do-highlight {
+        color: #00f0ff;
+        font-weight: 700;
+        text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+        margin-left: 2px;
+    }
+
+    .do-glow-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #00f0ff;
+        box-shadow: 0 0 8px #00f0ff;
+        animation: dotGlow 2s infinite ease-in-out;
+    }
+
+    @@keyframes boltPulse {
+        0% { transform: scale(1); filter: drop-shadow(0 0 4px #f38020); }
+        100% { transform: scale(1.25); filter: drop-shadow(0 0 10px #f38020) drop-shadow(0 0 15px #ffaa00); }
+    }
+
+    @@keyframes dotGlow {
+        0%, 100% { opacity: 0.4; transform: scale(0.9); }
+        50% { opacity: 1; transform: scale(1.3); }
     }
 
     .nav-links {

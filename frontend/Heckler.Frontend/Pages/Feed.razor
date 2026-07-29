@@ -13,6 +13,11 @@
             <span class="broadcast-title">MMO MAIN STAGE</span>
         </div>
 
+        <div class="edge-tech-badge" title="State persistence & real-time broadcast powered by Cloudflare Durable Objects">
+            <span class="bolt-glow">⚡</span>
+            <span>POWERED BY <strong class="orange-glow">DURABLE OBJECTS</strong></span>
+        </div>
+
         <div class="presence-badge">
             <span class="icon">👥</span>
             <span>@(stageState?.ListenersCount ?? 42) LISTENERS IN VENUE</span>
@@ -176,6 +181,24 @@
     @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
     .broadcast-title { font-family: 'Oswald', sans-serif; letter-spacing: 2px; color: var(--neon-purple); font-weight: 700; }
+    
+    .edge-tech-badge {
+        font-family: 'Oswald', sans-serif;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        color: rgba(255, 255, 255, 0.9);
+        background: linear-gradient(135deg, rgba(243, 128, 32, 0.15), rgba(157, 78, 221, 0.2));
+        border: 1px solid rgba(243, 128, 32, 0.5);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        box-shadow: 0 0 15px rgba(243, 128, 32, 0.25);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .bolt-glow { color: #f38020; filter: drop-shadow(0 0 6px #f38020); animation: boltPulse 1.5s infinite alternate; }
+    .orange-glow { color: #00f0ff; text-shadow: 0 0 8px rgba(0, 240, 255, 0.6); }
+
     .presence-badge { font-size: 0.85rem; color: var(--neon-blue); font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
 
     .next-joke-countdown {
