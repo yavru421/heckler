@@ -162,6 +162,7 @@ export class ComedianDO extends DurableObject {
 
         // 2. Fallback: Query D1 for least-recently-played jokes with audio in R2 (grouped by text to eliminate duplicate text entries)
         if (!joke) {
+          try {
             const combinedExclusions = Array.from(new Set([...lastPlayedIds, ...clientExcludedIds])).filter(Boolean);
             let placeholders = combinedExclusions.map(() => "?").join(",");
             let sql = `SELECT MIN(id) as id, text, category, author_name FROM jokes WHERE is_ghosted = 0`;
