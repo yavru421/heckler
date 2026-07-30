@@ -122,4 +122,19 @@ When building live broadcast or real-time state APIs on Cloudflare Workers and D
 3. **HTTP Heartbeat Listener Tracking**: For platforms supporting non-WebSocket HTTP clients, track active listener sessions via a `clientId` parameter mapped to sliding timestamp heartbeats in DO memory rather than relying solely on `this.ctx.getWebSockets().length`.
 </RULE[AGENTS.md]>
 
-<
+<RULE[AGENTS.md]>
+**Domain-Aware Telemetry SQL Invariant:**
+Whenever querying system history in DuckDB (mind.duckdb, agent_memory.duckdb, st_codex.duckdb) for user behavioral metrics:
+1. NEVER use rigid single-binary strings like LIKE '%ffmpeg%' or LIKE '%magick%'.
+2. ALWAYS expand SQL pattern filters to include verified operator aliases, shell scripts, and asset extensions:
+   - Video Editing & Rendering: Must check process-footage, process-fotage.ps1, blender, %.blend, alongside ffmpeg.
+   - 3D CAD & Spool Operations: Must check pour_logic.scad, %.scad, klipper, octoprint, spool.
+   - PowerShell / Automation Scripts: Must check send-agentmessage.ps1, remember_recent.ps1, clean-templatedemos.ps1, vault.ps1.
+</RULE[AGENTS.md]>
+
+<RULE[AGENTS.md]>
+**Synchronous Execution Invariant for Python & DuckDB Operations:**
+1. **Never Background Quick Commands**: When running Python scripts, DuckDB queries (`db_session.py`), HTTP verification checks, or single-step status probes via `run_command`, ALWAYS set `WaitMsBeforeAsync: 10000` (or `WaitMsBeforeAsync: 8000`) so the command completes synchronously within the step.
+2. **Prevent Database Lock Timeouts**: Asynchronous background Python tasks that query DuckDB hold file locks on DuckDB databases (`mind.duckdb`, `agent_memory.duckdb`) and prevent subsequent agent turns from reading or writing telemetry.
+3. **Immediate Error Visibility**: Running synchronous execution ensures any command failure, traceback, or stdout is immediately captured in context without leaving orphaned background tasks (`task-XX`) running indefinitely.
+</RULE[AGENTS.md]>
