@@ -399,29 +399,8 @@ export class ComedianDO extends DurableObject {
   }
 
   async alarm() {
-    try {
-      const todayKey = `dailyGenCount_${new Date().toISOString().split("T")[0]}`;
-      const dailyCount: number = (await this.state.storage.get(todayKey)) || 0;
-
-      // Saturate daily quota of 200 fresh sets into R2 storage
-      if (dailyCount < 200) {
-        const comedians = ["NeonMike", "SpicySarah", "QuantumQuentin"];
-        const comic = comedians[Math.floor(Math.random() * comedians.length)];
-        console.log(`Pre-generating joke #${dailyCount + 1}/200 for ${comic}...`);
-        
-        await this.generateJokeAndTTS(comic);
-        await this.state.storage.put(todayKey, dailyCount + 1);
-
-        // Schedule next background generation in 15 seconds to rapidly fill R2 pool
-        await this.state.storage.setAlarm(Date.now() + 15000);
-      } else {
-        console.log("Daily quota of 200 fresh AI sets reached for today. Pre-generator sleeping until tomorrow.");
-      }
-    } catch (e) {
-      console.error("Background pre-generator alarm error:", e);
-      // Retry in 30 seconds if error occurs
-      await this.state.storage.setAlarm(Date.now() + 30000);
-    }
+    console.log("Alarm disabled to stop billable usage.");
+    return;
   }
 
   // ── Core Generation Pipeline ─────────────────────────────────────
