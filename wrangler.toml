@@ -18,10 +18,6 @@ migrations_dir = "backend/migrations"
 # [ai]
 # binding = "AI"
 
-[[durable_objects.bindings]]
-name = "COMEDIAN_DO"
-class_name = "ComedianDO"
-
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ComedianDO"]
@@ -30,7 +26,12 @@ new_sqlite_classes = ["ComedianDO"]
 tag = "v2"
 new_sqlite_classes = ["ComedianDO"]
 
+[[migrations]]
+tag = "v3"
+deleted_classes = ["ComedianDO"]
+
 [[r2_buckets]]
 binding = "AUDIO_BUCKET"
 bucket_name = "heckler-audio"
+
 

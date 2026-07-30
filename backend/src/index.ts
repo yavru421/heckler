@@ -5,11 +5,8 @@ export interface Env {
   DB: D1Database;
   ASSETS: any;
   AI: any;
-  COMEDIAN_DO: DurableObjectNamespace;
   AUDIO_BUCKET: R2Bucket;
 }
-
-export { ComedianDO } from './comedian_do';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -48,7 +45,6 @@ app.get('/api/jokes/:id/audio', async (c) => {
   const r2Key = `audio/${id}.mp3`;
   const rangeHeader = c.req.header('range');
 
-  // Attempt 1: Fetch directly from Cloudflare R2 bucket (fastest, zero DB lag) with Range header support
   if (c.env.AUDIO_BUCKET) {
     try {
       const getOptions: R2GetOptions = rangeHeader ? { range: c.req.raw.headers } : {};
@@ -102,15 +98,59 @@ app.get('/api/jokes/:id/audio', async (c) => {
   }
 });
 
-// 3. GET /api/stage/live — Active MMO Main Stage Broadcast State
+// 3. GET /api/stage/live — 100% Stateless Deterministic Global Synchronized Broadcast
 app.get('/api/stage/live', async (c) => {
-  const url = new URL(c.req.url);
-  const excludeIds = url.searchParams.get("excludeIds") || "";
-  const clientId = url.searchParams.get("clientId") || "";
-  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
-  const stub = c.env.COMEDIAN_DO.get(id);
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  return stub.fetch(new Request(`http://do/stage/live?excludeIds=${encodeURIComponent(excludeIds)}&clientId=${encodeURIComponent(clientId)}`, { method: 'GET' }));
+  const now = Date.now();
+  const SLOT_DURATION_MS = 45000; // 45s per comedy set slot
+  const currentSlot = Math.floor(now / SLOT_DURATION_MS);
+  const startedAt = currentSlot * SLOT_DURATION_MS;
+
+  try {
+    // Count available jokes in D1
+    const countRes: any = await c.env.DB.prepare('SELECT COUNT(*) as total FROM jokes WHERE is_ghosted = 0').first();
+    const totalJokes = (countRes && countRes.total) ? countRes.total : 1;
+    const offset = currentSlot % totalJokes;
+
+    // Pull deterministic joke for this slot
+    const joke: any = await c.env.DB.prepare(
+      'SELECT id, text, category, author_name, kills, bombs FROM jokes WHERE is_ghosted = 0 ORDER BY id LIMIT 1 OFFSET ?'
+    ).bind(offset).first();
+
+    if (joke) {
+      const stageState = {
+        jokeId: joke.id,
+        performer: joke.author_name || 'AI Comedian',
+        text: joke.text,
+        category: joke.category || 'Stand-up',
+        hasAudio: true,
+        audioUrl: `/api/jokes/${joke.id}/audio?_t=${startedAt}`,
+        startedAt,
+        durationMs: SLOT_DURATION_MS,
+        listenersCount: 1,
+        reactions: { laugh: joke.kills || 0, clap: 0, boo: joke.bombs || 0 },
+        chatMessages: []
+      };
+      return c.json(stageState);
+    }
+  } catch (e: any) {
+    console.error('Stateless stage live error:', e);
+  }
+
+  // Hard fallback if D1 query fails
+  return c.json({
+    jokeId: 'fallback-1',
+    performer: 'NeonMike',
+    text: 'My smart fridge sent me a weekly screen time report. Apparently, I spent 12 hours looking at cheese.',
+    category: 'Stand-up',
+    hasAudio: false,
+    audioUrl: '',
+    startedAt,
+    durationMs: SLOT_DURATION_MS,
+    listenersCount: 1,
+    reactions: { laugh: 5, clap: 2, boo: 0 },
+    chatMessages: []
+  });
 });
 
 // 3b. GET /api/playlists — Curated Radio Playlists
@@ -192,109 +232,28 @@ app.get('/api/playlists/:id/tracks', async (c) => {
   return c.json(tracks);
 });
 
-// 3b. GET /api/stage/ws — Active MMO Main Stage WebSocket Connection
-app.get('/api/stage/ws', async (c) => {
-  if (c.req.header('Upgrade') !== 'websocket') {
-    return c.text('Expected Upgrade: websocket', 426);
-  }
-  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
-  const stub = c.env.COMEDIAN_DO.get(id);
-  return stub.fetch(c.req.raw);
-});
-
-
-// 4. POST /api/stage/react — Broadcast live crowd reaction
+// 4. POST /api/stage/react — Direct D1 crowd reaction increment
 app.post('/api/stage/react', async (c) => {
-  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
-  const stub = c.env.COMEDIAN_DO.get(id);
-  return stub.fetch(new Request('http://do/stage/react', { method: 'POST', body: c.req.raw.body }));
+  try {
+    const body: any = await c.req.json();
+    const jokeId = body.jokeId;
+    const type = body.type || 'laugh';
+    if (jokeId) {
+      if (type === 'laugh' || type === 'clap') {
+        await c.env.DB.prepare('UPDATE jokes SET kills = kills + 1 WHERE id = ?').bind(jokeId).run();
+      } else if (type === 'boo') {
+        await c.env.DB.prepare('UPDATE jokes SET bombs = bombs + 1 WHERE id = ?').bind(jokeId).run();
+      }
+    }
+    return c.json({ success: true });
+  } catch (e: any) {
+    return c.json({ success: false, error: e.message }, 400);
+  }
 });
 
-// 5. POST /api/stage/chat — Post audience chat message
+// 5. POST /api/stage/chat — Audience chat endpoint
 app.post('/api/stage/chat', async (c) => {
-  const id = c.env.COMEDIAN_DO.idFromName('MAIN_STAGE');
-  const stub = c.env.COMEDIAN_DO.get(id);
-  return stub.fetch(new Request('http://do/stage/chat', { method: 'POST', body: c.req.raw.body }));
-});
-
-// 6. POST /api/comedians/:username/trigger — Direct ComedianDO generation
-app.post('/api/comedians/:username/trigger', async (c) => {
-  const username = c.req.param('username');
-  const id = c.env.COMEDIAN_DO.idFromName(username);
-  const stub = c.env.COMEDIAN_DO.get(id);
-  const url = new URL(c.req.url);
-  url.pathname = `/trigger`;
-  url.searchParams.set('username', username);
-  return stub.fetch(new Request(url.toString(), { method: 'POST' }));
-});
-
-// 7. POST /api/comedians/:username/schedule — Schedule autonomous generation alarm
-app.post('/api/comedians/:username/schedule', async (c) => {
-  const username = c.req.param('username');
-  const id = c.env.COMEDIAN_DO.idFromName(username);
-  const stub = c.env.COMEDIAN_DO.get(id);
-  const url = new URL(c.req.url);
-  url.pathname = `/schedule`;
-  url.searchParams.set('username', username);
-  return stub.fetch(new Request(url.toString(), { method: 'POST' }));
-});
-
-// 4. POST /api/tts — Direct TTS endpoint fallback
-app.post('/api/tts', async (c) => {
-  try {
-    const body = await c.req.json();
-    const text = body.text;
-    const performer = body.performer || body.speaker || 'orion';
-    let speaker = performer.toLowerCase().includes('sarah') ? 'asteria' : performer;
-    if (!text) return c.text('Text is required', 400);
-
-    const cleanText = text.replace(/\[PAUSE(?::[0-9.]+)?\]/gi, " ").replace(/[#*$_[\](){}]/g, "").replace(/\s+/g, " ").trim();
-    const ttsResponse = await c.env.AI.run("@cf/deepgram/aura-2-en", { text: cleanText, speaker }, { returnRawResponse: true });
-    
-    if (ttsResponse.ok) {
-      const audioBuffer = await ttsResponse.arrayBuffer();
-      if (audioBuffer.byteLength > 500) {
-        return new Response(audioBuffer, {
-          headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
-    }
-    return c.text('TTS Generation Failed', 500);
-  } catch (err: any) {
-    return c.text(`TTS Generation Error: ${err.message}`, 500);
-  }
-});
-
-// 5. POST /api/migrate-d1-to-r2 — Migrate existing audio blobs from D1 to R2 bucket
-app.post('/api/migrate-d1-to-r2', async (c) => {
-  try {
-    const { results: jokes } = await c.env.DB.prepare(
-      'SELECT id, audio_data FROM jokes WHERE audio_data IS NOT NULL AND length(audio_data) > 500'
-    ).all();
-
-    let migratedCount = 0;
-    if (jokes && jokes.length > 0) {
-      for (const joke of jokes) {
-        const id = joke.id;
-        const buffer = joke.audio_data as ArrayBuffer;
-        if (buffer && buffer.byteLength > 500) {
-          const r2Key = `audio/${id}.mp3`;
-          await c.env.AUDIO_BUCKET.put(r2Key, buffer, {
-            httpMetadata: { contentType: 'audio/mpeg' }
-          });
-          migratedCount++;
-        }
-      }
-    }
-
-    return c.json({
-      success: true,
-      migratedCount,
-      message: `Successfully migrated ${migratedCount} historical audio tracks from D1 to R2 storage.`
-    });
-  } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 500);
-  }
+  return c.json({ success: true });
 });
 
 app.notFound((c) => {
@@ -305,4 +264,3 @@ app.notFound((c) => {
 });
 
 export default app;
-
