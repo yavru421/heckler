@@ -149,8 +149,8 @@ export class ComedianDO extends DurableObject {
         let lastPlayedIds: string[] = (await this.state.storage.get("lastPlayedIds")) || [];
         let lastPlayedTexts: string[] = (await this.state.storage.get("lastPlayedTexts")) || [];
 
-        // 1. Try to fetch from AI generation (if daily quota available)
-        if (dailyCount < 200) {
+        // 1. AI generation disabled to prevent RTN token burn (serving static pool only)
+        if (false) {
           try {
             joke = await this.generateJokeAndTTS(comic);
             await this.state.storage.put("lastGenAt", now);
