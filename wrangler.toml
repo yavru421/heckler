@@ -26,6 +26,10 @@ class_name = "ComedianDO"
 tag = "v1"
 new_sqlite_classes = ["ComedianDO"]
 
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ComedianDO"]
+
 [[r2_buckets]]
 binding = "AUDIO_BUCKET"
 bucket_name = "heckler-audio"
