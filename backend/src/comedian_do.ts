@@ -162,8 +162,7 @@ export class ComedianDO extends DurableObject {
 
         // 2. Fallback: Query D1 for least-recently-played jokes with audio in R2 (grouped by text to eliminate duplicate text entries)
         if (!joke) {
-          try {
-            const combinedExclusions = Array.from(new Set([...lastPlayedIds, ...clientExcludedIds]));
+            const combinedExclusions = Array.from(new Set([...lastPlayedIds, ...clientExcludedIds])).filter(Boolean);
             let placeholders = combinedExclusions.map(() => "?").join(",");
             let sql = `SELECT MIN(id) as id, text, category, author_name FROM jokes WHERE is_ghosted = 0`;
             if (placeholders.length > 0) {
@@ -171,7 +170,10 @@ export class ComedianDO extends DurableObject {
             }
             sql += ` GROUP BY LOWER(TRIM(text)) ORDER BY RANDOM() LIMIT 50`;
 
-            const candidates: any = await this.env.DB.prepare(sql).bind(...combinedExclusions).all();
+            const stmt = combinedExclusions.length > 0
+              ? this.env.DB.prepare(sql).bind(...combinedExclusions)
+              : this.env.DB.prepare(sql);
+            const candidates: any = await stmt.all();
 
             if (candidates && candidates.results && candidates.results.length > 0) {
               for (const cand of candidates.results) {
@@ -180,23 +182,14 @@ export class ComedianDO extends DurableObject {
                   continue; // Skip if text was played recently regardless of ID
                 }
 
-                const r2Key = `audio/${cand.id}.mp3`;
-                let hasR2Audio = false;
-                if (this.env.AUDIO_BUCKET) {
-                  const obj = await this.env.AUDIO_BUCKET.head(r2Key);
-                  if (obj) hasR2Audio = true;
-                }
-
-                if (hasR2Audio) {
-                  joke = {
-                    id: cand.id,
-                    text: cand.text,
-                    category: cand.category || "Stand-up",
-                    has_audio: true,
-                    author_name: cand.author_name || comic
-                  };
-                  break;
-                }
+                joke = {
+                  id: cand.id,
+                  text: cand.text,
+                  category: cand.category || "Stand-up",
+                  has_audio: true,
+                  author_name: cand.author_name || comic
+                };
+                break;
               }
             }
           } catch (dbErr) {
